@@ -24,7 +24,7 @@ import { ArchitectureNodeCard, type ArchitectureFlowNode } from "./ArchitectureN
 
 const nodeTypes: NodeTypes = { architectureNode: ArchitectureNodeCard };
 
-const FLOW_HOP_DURATION_SECONDS = 1.3;
+const FLOW_HOP_DURATION_SECONDS = 0.65;
 const FLOW_REPEAT_DELAY_SECONDS = 0.7;
 const processorFlowStages: Record<string, number> = {
   "memory-cache": 0,
