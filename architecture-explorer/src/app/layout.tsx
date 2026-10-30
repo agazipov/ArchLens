@@ -9,6 +9,14 @@ const geistMono = Geist_Mono({ subsets: ["latin", "cyrillic"], variable: "--font
 export const metadata: Metadata = {
   title: "ArchLens — обозреватель архитектур",
   description: "Интерактивная карта архитектур приложений для разработчиков",
+  icons: {
+    icon: [
+      { url: "/favicon-v2.ico", type: "image/x-icon" },
+      { url: "/favicon-64.png", type: "image/png", sizes: "64x64" },
+    ],
+    shortcut: "/favicon-v2.ico",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

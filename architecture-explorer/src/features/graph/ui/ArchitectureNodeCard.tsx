@@ -6,6 +6,8 @@ import { uiLabels } from "@/shared/ui/ui-labels";
 export type ArchitectureFlowNode = Node<{
   architectureNode: ArchitectureNode;
   onActivate: (id: string) => void;
+  walkthroughActive?: boolean;
+  muted?: boolean;
 }, "architectureNode">;
 
 const kindIcons: Record<NodeKind, typeof Server> = {
@@ -28,7 +30,7 @@ export function ArchitectureNodeCard({ data, selected }: NodeProps<ArchitectureF
   return (
     <button
       type="button"
-      className={`graph-node kind-${node.kind} ${selected ? "is-selected" : ""}`}
+      className={`graph-node kind-${node.kind} ${selected ? "is-selected" : ""} ${data.walkthroughActive ? "is-walkthrough-active" : ""} ${data.muted ? "is-muted" : ""}`}
       aria-label={`${node.label} — ${kindLabel}. ${uiLabels.openNodeDetails}`}
       aria-pressed={selected}
       onClick={(event) => {

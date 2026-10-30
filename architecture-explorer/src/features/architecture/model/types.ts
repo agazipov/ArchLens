@@ -37,6 +37,19 @@ export interface ArchitectureEdge {
   bidirectional?: boolean;
 }
 
+export interface ArchitectureWalkthroughStep {
+  nodeId: string;
+  edgeIds?: string[];
+  title: string;
+  description: string;
+}
+
+export interface ArchitectureWalkthrough {
+  title: string;
+  example: string;
+  steps: ArchitectureWalkthroughStep[];
+}
+
 export interface Architecture {
   id: string;
   title: string;
@@ -54,6 +67,7 @@ export interface Architecture {
   tradeoffs: { pros: string[]; cons: string[] };
   interactionStyles?: InteractionStyle[];
   tags?: string[];
+  walkthrough?: ArchitectureWalkthrough;
   nodes: ArchitectureNode[];
   edges: ArchitectureEdge[];
 }

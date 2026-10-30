@@ -33,6 +33,8 @@ export function ArchitectureWorkspace() {
   const searchParams = useSearchParams();
   const layout = useWorkspaceLayout();
   const [openPanel, setOpenPanel] = useState<"explorer" | "inspector" | null>(null);
+  const [explorerCollapsed, setExplorerCollapsed] = useState(false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
 
   const requestedArchitectureId = searchParams.get("architecture");
   const architecture = architectureById.get(requestedArchitectureId ?? "") ?? architectures[0];
@@ -62,6 +64,7 @@ export function ArchitectureWorkspace() {
 
   function selectNode(id?: string) {
     writeUrl(architecture.id, id);
+    if (id && layout === "desktop") setInspectorCollapsed(false);
     if (id && layout !== "desktop") setOpenPanel("inspector");
   }
 
@@ -74,8 +77,46 @@ export function ArchitectureWorkspace() {
     setOpenPanel(null);
   }
 
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const panel = document.querySelector<HTMLElement>(explorerOpen ? ".explorer-panel.is-open" : ".inspector-panel.is-open");
+    if (!panel) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusableSelector = "button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])";
+    const focusables = () => [...panel.querySelectorAll<HTMLElement>(focusableSelector)].filter((element) => element.offsetParent !== null);
+    focusables()[0]?.focus();
+
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dismissPanels();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items.at(-1)!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", trapFocus);
+    return () => {
+      document.removeEventListener("keydown", trapFocus);
+      previouslyFocused?.focus();
+    };
+    // dismissPanels intentionally closes the current URL-backed selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawerOpen, explorerOpen]);
+
   return (
-    <main className={`workspace-shell layout-${layout}`} data-layout={layout}>
+    <main className={`workspace-shell layout-${layout} ${explorerCollapsed ? "explorer-collapsed" : ""} ${inspectorCollapsed ? "inspector-collapsed" : ""}`} data-layout={layout}>
       {drawerOpen && (
         <button
           type="button"
@@ -85,6 +126,7 @@ export function ArchitectureWorkspace() {
         />
       )}
       <ArchitectureExplorer
+        key={architecture.category}
         architectures={architectures}
         selectedId={architecture.id}
         onSelect={selectArchitecture}
@@ -93,6 +135,7 @@ export function ArchitectureWorkspace() {
         onClose={() => setOpenPanel(null)}
       />
       <ArchitectureGraph
+        key={architecture.id}
         architecture={architecture}
         architectures={architectures}
         selectedNodeId={selectedNode?.id}
@@ -101,6 +144,11 @@ export function ArchitectureWorkspace() {
         onSelectNode={selectNode}
         onOpenExplorer={() => { if (selectedNode) selectNode(undefined); setOpenPanel("explorer"); }}
         onOpenInspector={() => { selectNode(undefined); setOpenPanel("inspector"); }}
+        explorerCollapsed={explorerCollapsed}
+        inspectorCollapsed={inspectorCollapsed}
+        onToggleExplorer={() => setExplorerCollapsed((collapsed) => !collapsed)}
+        onToggleInspector={() => setInspectorCollapsed((collapsed) => !collapsed)}
+        backgroundInert={drawerOpen}
       />
       <ArchitectureInspector
         architecture={architecture}
@@ -109,6 +157,7 @@ export function ArchitectureWorkspace() {
         isOpen={inspectorOpen}
         onClose={() => selectNode(undefined)}
         onDismiss={dismissPanels}
+        onSelectNode={selectNode}
       />
     </main>
   );

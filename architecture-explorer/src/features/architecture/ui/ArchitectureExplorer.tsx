@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Box, ChevronRight, CircleDot, Layers3, Search, X } from "lucide-react";
-import type { Architecture } from "../model/types";
+import type { Architecture, ArchitectureCategory } from "../model/types";
 import { uiLabels } from "@/shared/ui/ui-labels";
 
 interface Props {
@@ -16,6 +16,8 @@ interface Props {
 
 export function ArchitectureExplorer({ architectures, selectedId, onSelect, isDrawer, isOpen, onClose }: Props) {
   const [query, setQuery] = useState("");
+  const selectedCategory = architectures.find((architecture) => architecture.id === selectedId)?.category ?? architectures[0].category;
+  const [openCategories, setOpenCategories] = useState<Set<ArchitectureCategory>>(() => new Set([selectedCategory]));
   const normalizedQuery = query.trim().toLocaleLowerCase("ru");
   const visibleArchitectures = normalizedQuery
     ? architectures.filter((architecture) => [architecture.title, architecture.shortTitle, uiLabels.categories[architecture.category], ...(architecture.tags ?? [])].some((value) => value.toLocaleLowerCase("ru").includes(normalizedQuery)))
@@ -23,7 +25,7 @@ export function ArchitectureExplorer({ architectures, selectedId, onSelect, isDr
   const groups = Map.groupBy(visibleArchitectures, (architecture) => architecture.category);
 
   return (
-    <aside className={`explorer-panel ${isOpen ? "is-open" : ""}`} aria-hidden={isDrawer && !isOpen} inert={isDrawer && !isOpen ? true : undefined}>
+    <aside className={`explorer-panel ${isOpen ? "is-open" : ""}`} role={isDrawer ? "dialog" : undefined} aria-modal={isDrawer && isOpen ? true : undefined} aria-label={uiLabels.architectureExplorer} aria-hidden={isDrawer && !isOpen} inert={isDrawer && !isOpen ? true : undefined}>
       <div className="brand-row">
         <div className="brand-mark"><Layers3 size={18} strokeWidth={1.8} /></div>
         <div><div className="brand-name">ArchLens</div><div className="brand-subtitle">{uiLabels.brandSubtitle}</div></div>
@@ -45,12 +47,20 @@ export function ArchitectureExplorer({ architectures, selectedId, onSelect, isDr
       <nav aria-label={uiLabels.architectureSelection} className="architecture-nav">
         {visibleArchitectures.length === 0 && <p className="architecture-empty">{uiLabels.noArchitecturesFound}</p>}
         {[...groups.entries()].map(([category, items]) => (
-          <details key={category} className="nav-group" open>
+          <details key={category} className="nav-group" open={Boolean(normalizedQuery) || openCategories.has(category)} onToggle={(event) => {
+            if (normalizedQuery) return;
+            setOpenCategories((current) => {
+              const next = new Set(current);
+              if (event.currentTarget.open) next.add(category);
+              else next.delete(category);
+              return next;
+            });
+          }}>
             <summary className="nav-group-label"><span>{uiLabels.categories[category]}</span><span>{items.length}</span></summary>
             <div className="nav-group-items">{items.map((architecture) => {
               const active = architecture.id === selectedId;
               return (
-                <button type="button" key={architecture.id} onClick={() => onSelect(architecture.id)} className={`architecture-link ${active ? "is-active" : ""}`} aria-current={active ? "page" : undefined}>
+                <button type="button" key={architecture.id} onClick={() => { setOpenCategories(new Set([architecture.category])); onSelect(architecture.id); }} className={`architecture-link ${active ? "is-active" : ""}`} aria-current={active ? "page" : undefined}>
                   <span className="architecture-link-icon">{active ? <CircleDot size={15} /> : <Box size={15} />}</span>
                   <span className="architecture-link-copy"><strong>{architecture.shortTitle}</strong><small>{uiLabels.complexityLevels[architecture.complexity]} {uiLabels.complexity}</small></span>
                   <ChevronRight size={14} className="architecture-chevron" />
