@@ -63,3 +63,20 @@ Definition описывает system/runtime architecture или базовую 
 - локальные TypeScript definitions без backend и persistence.
 
 Evolution и визуальный builder намеренно не входят в эту итерацию. Текущие стабильные `node.id`, `kind`, позиции и типизированные edges позволяют позже добавить шаги эволюции, drag-and-drop и validation rules без замены доменной модели.
+
+## Production deployment
+
+Текущий production-хост запускает приложение как `archlens.service` от отдельного системного пользователя `archlens`. Next.js слушает только `127.0.0.1:8791`, а внешний трафик принимает nginx.
+
+Серверные файлы находятся в `deploy/`:
+
+- `archlens.service` — systemd unit;
+- `nginx-archlens.conf` — virtual host для `archlens.pro` и `www.archlens.pro`;
+- `deploy-server.sh` — обновление из `origin/main`, production-сборка и перезапуск сервиса.
+
+DNS-записи:
+
+- `A` для `@` → `89.124.106.49`;
+- `CNAME` для `www` → `archlens.pro.`.
+
+После обновления DNS HTTPS выпускается командой `certbot --nginx -d archlens.pro -d www.archlens.pro`.
