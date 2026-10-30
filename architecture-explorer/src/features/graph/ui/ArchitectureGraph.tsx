@@ -24,6 +24,24 @@ import { ArchitectureNodeCard, type ArchitectureFlowNode } from "./ArchitectureN
 
 const nodeTypes: NodeTypes = { architectureNode: ArchitectureNodeCard };
 
+const FLOW_HOP_DURATION_SECONDS = 1.3;
+const FLOW_REPEAT_DELAY_SECONDS = 0.7;
+const processorFlowStages: Record<string, number> = {
+  "memory-cache": 0,
+  "cache-fetch": 1,
+  "clock-fetch": 1,
+  "fetch-decode": 2,
+  "clock-decode": 2,
+  "decode-execution": 3,
+  "registers-execution": 3,
+  "execution-cache": 4,
+};
+const processorFlowStageCount = 5;
+
+function flowRatio(seconds: number, cycleSeconds: number) {
+  return Number((seconds / cycleSeconds).toFixed(6));
+}
+
 function ArchitectureEdge({
   id,
   label,
@@ -61,6 +79,23 @@ function ArchitectureEdge({
   const labelY = isHorizontal ? Math.min(sourceY, targetY) - 58 : defaultLabelY;
   const showFlowParticle = data?.showFlowParticle === true;
   const particleColor = typeof style?.stroke === "string" ? style.stroke : "#9a86d8";
+  const flowStage = typeof data?.flowStage === "number" ? data.flowStage : 0;
+  const flowStageCount = typeof data?.flowStageCount === "number" ? data.flowStageCount : 1;
+  const cycleSeconds = flowStageCount * FLOW_HOP_DURATION_SECONDS + FLOW_REPEAT_DELAY_SECONDS;
+  const travelStart = flowStage * FLOW_HOP_DURATION_SECONDS;
+  const travelEnd = travelStart + FLOW_HOP_DURATION_SECONDS;
+  const fadeSeconds = 0.06;
+  const motionKeyPoints = flowStage === 0 ? "0;1;1" : "0;0;1;1";
+  const motionKeyTimes = flowStage === 0
+    ? `0;${flowRatio(travelEnd, cycleSeconds)};1`
+    : `0;${flowRatio(travelStart, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`;
+  const motionKeySplines = flowStage === 0
+    ? "0.12 0 0.39 0; 0 0 1 1"
+    : "0 0 1 1; 0.12 0 0.39 0; 0 0 1 1";
+  const opacityValues = flowStage === 0 ? "0;1;1;0;0" : "0;0;1;1;0;0";
+  const opacityKeyTimes = flowStage === 0
+    ? `0;${flowRatio(fadeSeconds, cycleSeconds)};${flowRatio(travelEnd - fadeSeconds, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`
+    : `0;${flowRatio(travelStart, cycleSeconds)};${flowRatio(travelStart + fadeSeconds, cycleSeconds)};${flowRatio(travelEnd - fadeSeconds, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`;
 
   return (
     <>
@@ -76,18 +111,18 @@ function ArchitectureEdge({
         <circle className="flow-particle" r="4.5" fill={particleColor} aria-hidden="true">
           <animateMotion
             path={path}
-            dur="2s"
+            dur={`${cycleSeconds}s`}
             repeatCount="indefinite"
-            keyPoints="0;1;1"
-            keyTimes="0;0.65;1"
+            keyPoints={motionKeyPoints}
+            keyTimes={motionKeyTimes}
             calcMode="spline"
-            keySplines="0.12 0 0.39 0; 0 0 1 1"
+            keySplines={motionKeySplines}
           />
           <animate
             attributeName="opacity"
-            values="0;1;1;0;0"
-            keyTimes="0;0.035;0.62;0.65;1"
-            dur="2s"
+            values={opacityValues}
+            keyTimes={opacityKeyTimes}
+            dur={`${cycleSeconds}s`}
             repeatCount="indefinite"
           />
         </circle>
@@ -197,17 +232,20 @@ export function ArchitectureGraph({
   };
   }), [activeStep, architecture, compactProcessor, selectedNodeId, onSelectNode]);
 
-  const edges = useMemo<Edge[]>(() => architecture.edges.map((edge) => {
+  const edges = useMemo<Edge[]>(() => architecture.edges.map((edge, edgeIndex) => {
     const selectedRelated = !selectedNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId;
     const walkthroughRelated = !activeStep || activeStep.edgeIds?.includes(edge.id) === true;
     const related = selectedNodeId ? selectedRelated : activeStep ? walkthroughRelated : true;
     const idleFlow = !selectedNodeId && !activeStep;
     const color = edgeColors[edge.type];
+    const isProcessorFlow = architecture.id === "processor-architecture";
+    const flowStage = isProcessorFlow ? processorFlowStages[edge.id] ?? edgeIndex : edgeIndex;
+    const flowStageCount = isProcessorFlow ? processorFlowStageCount : architecture.edges.length;
     return {
       ...edge,
       type: "architectureEdge",
       animated: false,
-      data: { showFlowParticle: idleFlow, layout },
+      data: { showFlowParticle: idleFlow, layout, flowStage, flowStageCount },
       className: selectedNodeId || activeStep ? (related ? "is-related" : "is-muted") : undefined,
       style: { stroke: color, strokeWidth: related && (selectedNodeId || activeStep) ? 2.8 : 2 },
       markerStart: edge.bidirectional ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color } : undefined,
