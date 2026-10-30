@@ -27,6 +27,7 @@ const nodeTypes: NodeTypes = { architectureNode: ArchitectureNodeCard };
 function ArchitectureEdge({
   id,
   label,
+  data,
   sourceX,
   sourceY,
   sourcePosition,
@@ -38,6 +39,13 @@ function ArchitectureEdge({
   style,
   interactionWidth,
 }: EdgeProps) {
+  const layout = data?.layout as WorkspaceLayout | undefined;
+  const isReturnLane = id === "execution-cache";
+  const routeCenterY = isReturnLane
+    ? layout === "compact"
+      ? (sourceY + targetY) / 2 + 32
+      : Math.max(sourceY, targetY) + 104
+    : undefined;
   const [path, defaultLabelX, defaultLabelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -45,10 +53,14 @@ function ArchitectureEdge({
     targetX,
     targetY,
     targetPosition,
+    centerY: routeCenterY,
+    borderRadius: 10,
   });
-  const isHorizontal = Math.abs(sourceY - targetY) < 16;
+  const isHorizontal = !isReturnLane && Math.abs(sourceY - targetY) < 16;
   const labelX = isHorizontal ? (sourceX + targetX) / 2 : defaultLabelX;
   const labelY = isHorizontal ? Math.min(sourceY, targetY) - 58 : defaultLabelY;
+  const showFlowParticle = data?.showFlowParticle === true;
+  const particleColor = typeof style?.stroke === "string" ? style.stroke : "#9a86d8";
 
   return (
     <>
@@ -60,6 +72,26 @@ function ArchitectureEdge({
         style={style}
         interactionWidth={interactionWidth}
       />
+      {showFlowParticle && (
+        <circle className="flow-particle" r="4.5" fill={particleColor} aria-hidden="true">
+          <animateMotion
+            path={path}
+            dur="2s"
+            repeatCount="indefinite"
+            keyPoints="0;1;1"
+            keyTimes="0;0.65;1"
+            calcMode="spline"
+            keySplines="0.12 0 0.39 0; 0 0 1 1"
+          />
+          <animate
+            attributeName="opacity"
+            values="0;1;1;0;0"
+            keyTimes="0;0.035;0.62;0.65;1"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      )}
       {label && (
         <EdgeLabelRenderer>
           <div
@@ -174,7 +206,8 @@ export function ArchitectureGraph({
     return {
       ...edge,
       type: "architectureEdge",
-      animated: idleFlow,
+      animated: false,
+      data: { showFlowParticle: idleFlow, layout },
       className: selectedNodeId || activeStep ? (related ? "is-related" : "is-muted") : undefined,
       style: { stroke: color, strokeWidth: related && (selectedNodeId || activeStep) ? 2.8 : 2 },
       markerStart: edge.bidirectional ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color } : undefined,
@@ -182,7 +215,7 @@ export function ArchitectureGraph({
       focusable: false,
       ariaLabel: `${edge.source} — ${edge.target}: ${edge.label ?? uiLabels.edgeKinds[edge.type]}`,
     };
-  }), [activeStep, architecture, selectedNodeId]);
+  }), [activeStep, architecture, layout, selectedNodeId]);
 
   const presentEdgeKinds = useMemo(() => [...new Set(architecture.edges.map((edge) => edge.type))], [architecture.edges]);
   const hasBidirectionalEdges = architecture.edges.some((edge) => edge.bidirectional);

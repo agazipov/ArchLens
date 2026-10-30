@@ -39,11 +39,15 @@ export function ArchitectureNodeCard({ data, selected }: NodeProps<ArchitectureF
       }}
     >
       <Handle type="target" position={Position.Left} className="node-handle" />
+      <Handle id="target-upper" type="target" position={Position.Left} className="node-handle node-handle-route" style={{ top: "32%" }} />
+      <Handle id="target-lower" type="target" position={Position.Left} className="node-handle node-handle-route" style={{ top: "68%" }} />
       <span className="node-topline"><span>{kindLabel}</span><Icon size={14} /></span>
       <span className="node-title">{node.label}</span>
       {node.subtitle && <span className="node-subtitle">{node.subtitle}</span>}
       <span className="node-tooltip" role="tooltip">{node.description}</span>
       <Handle type="source" position={Position.Right} className="node-handle" />
+      <Handle id="source-upper" type="source" position={Position.Right} className="node-handle node-handle-route" style={{ top: "32%" }} />
+      <Handle id="source-lower" type="source" position={Position.Right} className="node-handle node-handle-route" style={{ top: "68%" }} />
     </button>
   );
 }

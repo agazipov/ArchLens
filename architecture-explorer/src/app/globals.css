@@ -94,6 +94,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid #a8c8ec; outline
 .react-flow__edge:hover .react-flow__edge-path { stroke-width: 2.4 !important; }
 .react-flow__edge.is-muted { opacity: .18; }
 .react-flow__edge.is-related .react-flow__edge-path { filter: drop-shadow(0 0 3px rgba(141,179,226,.3)); }
+.flow-particle { pointer-events: none; filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 0 6px currentColor); }
 .flow-edge-label { position: absolute; z-index: 4; padding: 4px 6px; border: 1px solid rgba(62,74,89,.88); border-radius: 4px; background: rgba(18,22,29,.97); box-shadow: 0 3px 10px rgba(0,0,0,.22); color: #ced6df; font-size: 11px; font-weight: 680; line-height: 1.2; white-space: nowrap; pointer-events: none; }
 .react-flow__node { cursor: default; }
 .graph-node { width: 188px; min-height: 94px; position: relative; display: block; text-align: left; color: inherit; border: 1px solid #3d4958; border-radius: 9px; padding: 13px 14px 14px; background: #151a21; box-shadow: 0 9px 26px rgba(0,0,0,.22); cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s, opacity .15s; }
@@ -106,6 +107,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid #a8c8ec; outline
 .node-title { display: block; color: #f1f4f7; font-size: 14px; line-height: 1.2; font-weight: 680; letter-spacing: -.015em; }
 .node-subtitle { display: block; color: #a2adba; font-size: 10px; margin-top: 4px; }
 .node-handle { width: 7px !important; height: 7px !important; background: #66788d !important; border: 2px solid #141920 !important; }
+.node-handle-route { opacity: 0; pointer-events: none; }
 .graph-node.kind-client { border-top-color: #5f8fb7; }
 .graph-node.kind-client .node-topline { color: #78a8d1; }
 .graph-node.kind-server { border-top-color: #687fa9; }
@@ -250,5 +252,5 @@ button:focus-visible, select:focus-visible { outline: 2px solid #a8c8ec; outline
 
 @media (prefers-reduced-motion: reduce) {
   .explorer-panel, .inspector-panel, .graph-node, .node-tooltip { transition: none; }
-  .react-flow__edge.animated path { animation: none !important; stroke-dasharray: none; }
+  .flow-particle { display: none; }
 }

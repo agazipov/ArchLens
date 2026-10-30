@@ -33,12 +33,12 @@ export const processorArchitecture: Architecture = {
   ],
   edges: [
     { id: "memory-cache", source: "main-memory", target: "cache", label: "строки кэша", type: "data", bidirectional: true },
-    { id: "cache-fetch", source: "cache", target: "fetch", label: "байты команды", type: "data" },
+    { id: "cache-fetch", source: "cache", target: "fetch", sourceHandle: "source-upper", targetHandle: "target-lower", label: "байты команды", type: "data" },
     { id: "fetch-decode", source: "fetch", target: "decode-control", label: "команда", type: "data" },
-    { id: "decode-execution", source: "decode-control", target: "execution", label: "управляющие сигналы", type: "control" },
-    { id: "registers-execution", source: "registers", target: "execution", label: "операнды / результат", type: "data", bidirectional: true },
-    { id: "execution-cache", source: "execution", target: "cache", label: "чтение / запись", type: "data", bidirectional: true },
-    { id: "clock-fetch", source: "clock", target: "fetch", label: "такт", type: "control" },
-    { id: "clock-decode", source: "clock", target: "decode-control", label: "такт", type: "control" },
+    { id: "decode-execution", source: "decode-control", target: "execution", sourceHandle: "source-lower", targetHandle: "target-upper", label: "управляющие сигналы", type: "control" },
+    { id: "registers-execution", source: "registers", target: "execution", sourceHandle: "source-upper", targetHandle: "target-lower", label: "операнды / результат", type: "data", bidirectional: true },
+    { id: "execution-cache", source: "execution", target: "cache", sourceHandle: "source-lower", targetHandle: "target-lower", label: "чтение / запись", type: "data", bidirectional: true },
+    { id: "clock-fetch", source: "clock", target: "fetch", sourceHandle: "source-upper", targetHandle: "target-lower", label: "такт", type: "control" },
+    { id: "clock-decode", source: "clock", target: "decode-control", sourceHandle: "source-lower", targetHandle: "target-lower", label: "такт", type: "control" },
   ],
 };
