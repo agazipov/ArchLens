@@ -49,9 +49,10 @@ export function ArchitectureExplorer({ architectures, selectedId, onSelect, isDr
         {[...groups.entries()].map(([category, items]) => (
           <details key={category} className="nav-group" open={Boolean(normalizedQuery) || openCategories.has(category)} onToggle={(event) => {
             if (normalizedQuery) return;
+            const isOpen = event.currentTarget.open;
             setOpenCategories((current) => {
               const next = new Set(current);
-              if (event.currentTarget.open) next.add(category);
+              if (isOpen) next.add(category);
               else next.delete(category);
               return next;
             });
