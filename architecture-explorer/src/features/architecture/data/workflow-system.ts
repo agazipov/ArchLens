@@ -8,6 +8,49 @@ export const workflowSystem: Architecture = {
   stack: [{ name: "Temporal" }, { name: "Camunda" }, { name: "RabbitMQ / Kafka" }, { name: "PostgreSQL" }], alternatives: [{ name: "Application state machine" }, { name: "Background Job Processing" }],
   tradeoffs: { pros: ["Durable progress", "Retry и compensation", "Наблюдаемое состояние процесса"], cons: ["Новая operational subsystem", "Версионирование workflow", "Нужно проектировать идемпотентные activities"] },
   interactionStyles: ["request-response", "async"], tags: ["workflow", "state-machine", "workers"],
+  flowScenarios: [{
+    id: "human-approval",
+    title: "Onboarding with human approval",
+    description: "Durable workflow запускает activity, переживает ожидание решения и продолжает только после approval signal.",
+    scope: "example",
+    fidelity: "detailed",
+    assumptions: ["Workflow state и timers сохраняются durable engine-ом.", "Worker activities идемпотентны относительно retries.", "Показана approved ветвь; rejected path завершает процесс без provisioning."],
+    sources: [{ title: "Temporal: Workflow message passing", url: "https://docs.temporal.io/encyclopedia/workflow-message-passing" }],
+    steps: [
+      { id: "start", title: "UI запускает onboarding", description: "API авторизует command, engine создаёт instance и сохраняет начальное execution state.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "ui", to: "api", edgeId: "ui-api", kind: "request", label: "start onboarding" },
+        { type: "transfer", from: "api", to: "engine", edgeId: "api-engine", kind: "control", label: "start workflow" },
+        { type: "transfer", from: "engine", to: "database", edgeId: "engine-db", kind: "data", label: "persist instance" },
+      ] } },
+      { id: "notify", title: "Approval task доставляется worker-у", description: "Engine планирует activity отдельно от orchestration state; worker отправляет уведомление и возвращает result.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "engine", to: "queue", edgeId: "engine-queue", kind: "message", label: "schedule notification" },
+        { type: "transfer", from: "queue", to: "workers", edgeId: "queue-workers", kind: "message", label: "deliver task" },
+        { type: "transfer", from: "workers", to: "engine", edgeId: "workers-engine", kind: "message", label: "notification sent" },
+      ] } },
+      { id: "wait", title: "Workflow ожидает человеческое решение", description: "HTTP request уже не открыт: durable instance пассивно ждёт external signal часы или дни.", flow: { type: "sequence", steps: [
+        { type: "activate", nodeId: "engine", label: "approval pending" },
+        { type: "wait", label: "wait for approval signal", duration: "long" },
+      ] } },
+      { id: "signal", title: "Approver отправляет решение", description: "UI action проходит через API как signal/update, затем decision фиксируется в workflow history.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "ui", to: "api", edgeId: "ui-api", kind: "request", label: "approve" },
+        { type: "transfer", from: "api", to: "engine", edgeId: "api-engine", kind: "control", label: "approval signal" },
+        { type: "transfer", from: "engine", to: "database", edgeId: "engine-db", kind: "data", label: "record decision" },
+      ] } },
+      { id: "continue", title: "Engine выбирает следующий transition", description: "Approved path планирует provisioning; rejected path остаётся видимой альтернативой.", flow: { type: "branch", condition: "Approval decision", paths: [
+        { id: "approved", label: "Approved", selected: true, steps: [
+          { type: "transfer", from: "engine", to: "queue", edgeId: "engine-queue", kind: "message", label: "schedule provisioning" },
+          { type: "transfer", from: "queue", to: "workers", edgeId: "queue-workers", kind: "message", label: "deliver activity" },
+          { type: "transfer", from: "workers", to: "engine", edgeId: "workers-engine", kind: "message", label: "account provisioned" },
+          { type: "transfer", from: "engine", to: "database", edgeId: "engine-db", kind: "data", label: "complete workflow" },
+          { type: "outcome", nodeId: "engine", outcome: "success", label: "onboarding completed" },
+        ] },
+        { id: "rejected", label: "Rejected", steps: [
+          { type: "transfer", from: "engine", to: "database", edgeId: "engine-db", kind: "data", label: "close as rejected" },
+          { type: "outcome", nodeId: "engine", outcome: "failure", label: "onboarding stopped" },
+        ] },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "ui", kind: "client", label: "Workflow UI", position: { x: 20, y: 220 }, description: "Запускает процесс и показывает его текущее состояние.", reason: "Пользователь взаимодействует с процессом в разные моменты времени.", responsibilities: ["Start workflow", "Human tasks", "Progress UI"], useCases: ["Approval", "Onboarding", "Case handling"] },
     { id: "api", kind: "api", label: "Workflow API", position: { x: 280, y: 220 }, description: "Авторизует команды и переводит UI actions в workflow signals.", reason: "Внешние callers не должны напрямую менять engine state.", responsibilities: ["Authorization", "Commands", "Signals"], useCases: ["Start", "Approve", "Cancel"] },

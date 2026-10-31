@@ -8,6 +8,24 @@ export const directToStorageUpload: Architecture = {
   stack: [{ name: "S3-compatible storage" }, { name: "Signed URLs" }], alternatives: [{ name: "Application-mediated upload", note: "проще для маленьких файлов" }],
   tradeoffs: { pros: ["Меньше application bandwidth", "Storage масштабирует upload path", "Backend сохраняет access control"], cons: ["Нужен finalize/verification flow", "Signed URL имеет ограниченный lifetime", "Untrusted files требуют последующей проверки"] },
   interactionStyles: ["request-response"], tags: ["upload", "object-storage", "signed-url"],
+  flowScenarios: [{
+    id: "presigned-upload",
+    title: "Upload with a presigned URL",
+    description: "Backend выдаёт ограниченную upload capability, после чего file bytes идут из browser прямо в object storage.",
+    scope: "reference",
+    fidelity: "detailed",
+    assumptions: ["Backend уже authenticated пользователя и выбрал допустимый object key.", "Signed URL ограничен конкретной операцией и имеет короткий срок жизни.", "Post-upload validation и malware scanning остаются последующими шагами за границей этой схемы."],
+    sources: [{ title: "Amazon S3: Uploading objects with presigned URLs", url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html" }],
+    steps: [
+      { id: "authorize", title: "Browser запрашивает право на upload", description: "Backend проверяет identity, policy, object name и ожидаемый content type.", flow: { type: "transfer", from: "browser", to: "backend", edgeId: "browser-backend", kind: "request", label: "request upload" } },
+      { id: "issue", title: "Backend выпускает временную capability", description: "Signed URL связывает разрешённую storage operation с ограниченным lifetime.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "backend", to: "signed-url", edgeId: "backend-url", kind: "control", label: "sign PUT capability" },
+        { type: "transfer", from: "signed-url", to: "browser", edgeId: "url-browser", kind: "data", label: "temporary URL" },
+      ] } },
+      { id: "transfer", title: "Файл минует application server", description: "Browser использует capability и передаёт большой payload непосредственно storage service.", flow: { type: "transfer", from: "browser", to: "storage", edgeId: "browser-storage", kind: "data", label: "PUT object", duration: "long" } },
+      { id: "stored", title: "Object Storage принимает объект", description: "Application bandwidth не участвует в передаче file bytes.", flow: { type: "outcome", nodeId: "storage", outcome: "accepted", label: "object stored" } },
+    ],
+  }],
   nodes: [
     { id: "browser", kind: "client", label: "Browser", position: { x: 20, y: 220 }, description: "Запрашивает разрешение, затем загружает файл напрямую в storage.", reason: "Источник файла уже находится на клиентском устройстве.", responsibilities: ["Upload request", "Direct transfer", "Progress UI"], useCases: ["Image upload", "Video upload", "Documents"] },
     { id: "backend", kind: "server", label: "Backend", subtitle: "Authorization boundary", position: { x: 300, y: 80 }, description: "Проверяет пользователя и создаёт короткоживущую upload capability.", reason: "Storage не должен принимать произвольные публичные записи.", responsibilities: ["Authorization", "Object key policy", "Signed URL creation"], useCases: ["Start upload", "Finalize metadata"] },

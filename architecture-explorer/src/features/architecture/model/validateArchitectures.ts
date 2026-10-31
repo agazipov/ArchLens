@@ -32,6 +32,7 @@ function validateFlowStep(step: FlowStep, path: string, nodeIds: Set<string>, ed
       : edges.find((edge) => (edge.source === step.from && edge.target === step.to) || (edge.source === step.to && edge.target === step.from));
     if (!matchingEdge) errors.push(`${path}: transfer должен проходить по существующей topology edge.`);
     else if (!((matchingEdge.source === step.from && matchingEdge.target === step.to) || (matchingEdge.source === step.to && matchingEdge.target === step.from))) errors.push(`${path}.edgeId: edge не соединяет from и to.`);
+    else if (matchingEdge.source === step.to && matchingEdge.target === step.from && !matchingEdge.bidirectional) errors.push(`${path}: reverse transfer требует bidirectional topology edge.`);
     return;
   }
   if (step.type === "activate") {
