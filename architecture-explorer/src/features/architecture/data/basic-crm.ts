@@ -8,13 +8,35 @@ export const basicCrm: Architecture = {
   stack: [{ name: "React / Angular / Vue" }, { name: "Django / Laravel / Rails / ASP.NET Core" }, { name: "PostgreSQL" }], alternatives: [{ name: "Server-rendered Web Application" }, { name: "Modular Monolith" }],
   tradeoffs: { pros: ["Простой mental model", "Транзакционная согласованность", "Низкая operational complexity"], cons: ["Backend может стать большим", "Тяжёлые отчёты могут мешать transactional workload", "Интеграции требуют отдельной границы по мере роста"] },
   interactionStyles: ["request-response"], tags: ["crm", "business", "crud"],
+  flowScenarios: [{
+    id: "create-and-assign-lead",
+    title: "Create and assign a sales lead",
+    description: "CRM backend проверяет форму и сохраняет lead вместе с ownership change как одну транзакционную операцию.",
+    scope: "example",
+    fidelity: "simplified",
+    assumptions: ["Employee уже authenticated и имеет право создавать leads.", "Lead record и initial assignment фиксируются в одной database transaction.", "Показан успешный commit path."],
+    sources: [{ title: "PostgreSQL: Transactions", url: "https://www.postgresql.org/docs/current/tutorial-transactions.html" }],
+    steps: [
+      { id: "submit", title: "Employee отправляет lead form", description: "Browser передаёт customer details и выбранного owner в trusted backend.", flow: { type: "transfer", from: "browser", to: "backend", edgeId: "browser-backend", kind: "request", label: "create lead" } },
+      { id: "validate", title: "Backend применяет access и business rules", description: "CRM проверяет обязательные поля, duplicate policy и допустимость assignment.", flow: { type: "activate", nodeId: "backend", label: "authorize and validate" } },
+      { id: "commit", title: "Lead и assignment сохраняются атомарно", description: "Database делает изменения видимыми вместе после успешного commit.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "backend", to: "database", edgeId: "backend-db", kind: "data", label: "insert lead and assignment" },
+        { type: "activate", nodeId: "database", label: "commit transaction" },
+        { type: "transfer", from: "database", to: "backend", edgeId: "backend-db", kind: "response", label: "committed lead" },
+      ] } },
+      { id: "confirm", title: "Browser получает canonical record", description: "UI показывает database-generated id и подтверждённого owner.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "backend", to: "browser", edgeId: "browser-backend", kind: "response", label: "201 lead created" },
+        { type: "outcome", nodeId: "browser", outcome: "success", label: "lead card displayed" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "browser", kind: "client", label: "Browser", position: { x: 20, y: 170 }, description: "Показывает leads, customers, tasks и reports авторизованному сотруднику.", reason: "Business users нужен единый рабочий интерфейс.", responsibilities: ["UI", "Forms", "Filtering"], useCases: ["Lead list", "Customer card", "Task board"] },
     { id: "backend", kind: "server", label: "CRM Backend", position: { x: 300, y: 170 }, description: "Авторизует сотрудников и выполняет CRM use cases.", reason: "Customer data и business policies должны оставаться в доверенной среде.", responsibilities: ["Access control", "Business rules", "Queries"], useCases: ["Create lead", "Assign task", "Update customer"], stack: [{ name: "Django" }, { name: "Laravel" }, { name: "Rails" }, { name: "ASP.NET Core" }] },
     { id: "database", kind: "database", label: "PostgreSQL", subtitle: "System of record", position: { x: 580, y: 170 }, description: "Хранит связанные records, ownership и историю изменений.", reason: "CRM data требует связей, фильтрации и транзакционной целостности.", responsibilities: ["Persistence", "Relations", "Indexes"], useCases: ["Leads", "Customers", "Tasks"], stack: [{ name: "PostgreSQL" }] },
   ],
   edges: [
-    { id: "browser-backend", source: "browser", target: "backend", label: "HTTPS", type: "request" },
-    { id: "backend-db", source: "backend", target: "database", label: "CRUD / queries", type: "data" },
+    { id: "browser-backend", source: "browser", target: "backend", label: "HTTPS", type: "request", bidirectional: true },
+    { id: "backend-db", source: "backend", target: "database", label: "CRUD / queries", type: "data", bidirectional: true },
   ],
 };
