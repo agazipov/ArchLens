@@ -8,6 +8,29 @@ export const notificationService: Architecture = {
   stack: [{ name: "RabbitMQ / Kafka / NATS" }, { name: "Background workers" }, { name: "Email / Push / SMS providers" }], alternatives: [{ name: "Direct provider integration", note: "для очень простого старта" }],
   tradeoffs: { pros: ["API latency не зависит от provider", "Retry и rate limiting", "Каналы изолированы от application"], cons: ["Eventual delivery", "Нужна идемпотентность", "Наблюдаемость проходит через несколько систем"] },
   interactionStyles: ["async"], tags: ["notifications", "queue", "delivery"],
+  flowScenarios: [{
+    id: "critical-multichannel-alert",
+    title: "Send a critical alert across channels",
+    description: "Application фиксирует notification intent, queue сглаживает нагрузку, а worker параллельно вызывает независимых providers.",
+    scope: "example",
+    fidelity: "simplified",
+    assumptions: ["Recipient разрешил все три канала для critical alerts.", "Каждый provider call использует стабильный idempotency key.", "Provider callbacks и окончательные delivery receipts находятся за границей этой схемы."],
+    sources: [{ title: "Azure Architecture Center: Queue-Based Load Leveling", url: "https://learn.microsoft.com/en-us/azure/architecture/patterns/queue-based-load-leveling" }],
+    steps: [
+      { id: "enqueue", title: "Application публикует notification intent", description: "User-facing request не ждёт внешних email, push или SMS providers.", flow: { type: "transfer", from: "application", to: "queue", edgeId: "application-queue", kind: "message", label: "critical alert job" } },
+      { id: "consume", title: "Worker применяет preferences и template", description: "Queue отдаёт job consumer-у, который формирует channel-specific payloads.", flow: { type: "transfer", from: "queue", to: "worker", edgeId: "queue-worker", kind: "message", label: "consume alert" } },
+      { id: "fanout", title: "Каналы вызываются параллельно", description: "Медленный provider не блокирует начало доставки через остальные разрешённые каналы.", flow: { type: "parallel", steps: [
+        { type: "transfer", from: "worker", to: "email", edgeId: "worker-email", kind: "request", label: "send email" },
+        { type: "transfer", from: "worker", to: "push", edgeId: "worker-push", kind: "request", label: "send push" },
+        { type: "transfer", from: "worker", to: "sms", edgeId: "worker-sms", kind: "request", label: "send SMS" },
+      ] } },
+      { id: "accepted", title: "Providers принимают delivery work", description: "Сервис считает dispatch завершённым после передачи во внешние каналы; фактическая доставка остаётся eventual.", flow: { type: "parallel", steps: [
+        { type: "outcome", nodeId: "email", outcome: "accepted", label: "email accepted" },
+        { type: "outcome", nodeId: "push", outcome: "accepted", label: "push accepted" },
+        { type: "outcome", nodeId: "sms", outcome: "accepted", label: "SMS accepted" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "application", kind: "server", label: "Application", position: { x: 20, y: 220 }, description: "Решает, что пользователю нужно отправить уведомление.", reason: "Domain event или use case определяет смысл сообщения.", responsibilities: ["Notification intent", "Recipient", "Template data"], useCases: ["Order confirmed", "Password reset", "Mention"] },
     { id: "queue", kind: "infrastructure", label: "Queue", position: { x: 280, y: 220 }, description: "Буферизует jobs и отделяет application availability от providers.", reason: "Доставка может быть медленной, rate-limited или временно недоступной.", responsibilities: ["Buffering", "Retry scheduling", "Backpressure"], useCases: ["Delivery jobs", "Peak smoothing"], stack: [{ name: "RabbitMQ" }, { name: "Kafka" }, { name: "NATS" }] },

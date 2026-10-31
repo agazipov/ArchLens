@@ -8,6 +8,30 @@ export const analyticsDashboard: Architecture = {
   stack: [{ name: "ETL / CDC" }, { name: "Analytics database / warehouse" }, { name: "Reporting backend" }], alternatives: [{ name: "Read replica" }, { name: "Materialized views" }],
   tradeoffs: { pros: ["Production DB защищена от тяжёлых queries", "Analytics schema оптимизирована для reads", "Можно хранить историю"], cons: ["Данные запаздывают", "ETL требует monitoring", "Дублирование и data governance"] },
   interactionStyles: ["batch", "request-response"], tags: ["analytics", "etl", "reporting"],
+  flowScenarios: [{
+    id: "refresh-revenue-dashboard",
+    title: "Refresh a revenue dashboard",
+    description: "ETL переносит transactional changes в analytics storage, после чего dashboard выполняет тяжёлый read вне production database.",
+    scope: "typical",
+    fidelity: "detailed",
+    assumptions: ["ETL читает согласованный snapshot или упорядоченный change stream.", "Warehouse содержит analytical model, подходящую для revenue aggregation.", "Dashboard показывает timestamp последнего успешного refresh, потому что данные не строго realtime."],
+    sources: [{ title: "Azure Architecture Center: Extract, transform, and load", url: "https://learn.microsoft.com/azure/architecture/data-guide/relational-data/etl" }],
+    steps: [
+      { id: "extract", title: "ETL извлекает production changes", description: "Transactional source отдаёт snapshot или change batch, не обслуживая сам dashboard query.", flow: { type: "transfer", from: "production", to: "etl", edgeId: "production-etl", kind: "data", label: "extract changes" } },
+      { id: "load", title: "Преобразованный batch загружается в warehouse", description: "ETL применяет business mappings и обновляет analytical tables.", flow: { type: "sequence", steps: [
+        { type: "activate", nodeId: "etl", label: "transform and validate" },
+        { type: "transfer", from: "etl", to: "warehouse", edgeId: "etl-warehouse", kind: "data", label: "load analytical batch", duration: "long" },
+        { type: "outcome", nodeId: "warehouse", outcome: "accepted", label: "refresh checkpoint committed" },
+      ] } },
+      { id: "request", title: "Пользователь открывает revenue report", description: "Reporting backend авторизует filters и формирует ограниченный analytical query.", flow: { type: "transfer", from: "dashboard", to: "reporting", edgeId: "dashboard-reporting", kind: "request", label: "revenue report" } },
+      { id: "query", title: "Aggregation выполняется вне production DB", description: "Warehouse сканирует исторические данные и возвращает готовый result set reporting layer-у.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "reporting", to: "warehouse", edgeId: "reporting-warehouse", kind: "request", label: "aggregate revenue" },
+        { type: "transfer", from: "warehouse", to: "reporting", edgeId: "reporting-warehouse", kind: "response", label: "aggregated series" },
+        { type: "transfer", from: "reporting", to: "dashboard", edgeId: "dashboard-reporting", kind: "response", label: "report data" },
+        { type: "outcome", nodeId: "dashboard", outcome: "success", label: "charts rendered" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "production", kind: "database", label: "Production Database", subtitle: "Transactional source", position: { x: 20, y: 20 }, description: "Обслуживает application transactions и остаётся source of operational truth.", reason: "Transactional workload требует низкой latency и предсказуемой нагрузки.", responsibilities: ["Application writes", "Operational reads", "Transactions"], useCases: ["Orders", "Users", "Payments"] },
     { id: "etl", kind: "infrastructure", label: "ETL / Sync", position: { x: 300, y: 20 }, description: "Копирует и преобразует production data по schedule или change stream.", reason: "Analytics model отличается от transactional schema.", responsibilities: ["Extract", "Transform", "Load", "Checkpoint"], useCases: ["Batch sync", "CDC"] },
@@ -18,7 +42,7 @@ export const analyticsDashboard: Architecture = {
   edges: [
     { id: "production-etl", source: "production", target: "etl", label: "snapshot / changes", type: "data" },
     { id: "etl-warehouse", source: "etl", target: "warehouse", label: "batch load", type: "async" },
-    { id: "dashboard-reporting", source: "dashboard", target: "reporting", label: "report query", type: "request" },
-    { id: "reporting-warehouse", source: "reporting", target: "warehouse", label: "analytics query", type: "data" },
+    { id: "dashboard-reporting", source: "dashboard", target: "reporting", label: "report query", type: "request", bidirectional: true },
+    { id: "reporting-warehouse", source: "reporting", target: "warehouse", label: "analytics query", type: "data", bidirectional: true },
   ],
 };
