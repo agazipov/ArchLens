@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const marketplace: Architecture = {
-  id: "marketplace", title: "Marketplace", shortTitle: "Marketplace", category: "commerce", level: "system", complexity: "High",
+  id: "marketplace", title: "Marketplace", shortTitle: "Marketplace", category: "application-architecture", level: "system", complexity: "High",
   description: "Frontend обращается к единому backend/BFF, а catalog, orders, users и payments остаются явно разделёнными business modules.",
   keyIdea: "Marketplace нуждается в доменных границах, но может начинаться как modular monolith без преждевременных микросервисов.",
   suitableFor: ["Платформа покупателей и продавцов", "Разные жизненные циклы каталога и заказа", "Растущая domain complexity"], notIdealFor: ["Простой магазин одного продавца", "MVP без marketplace workflows"],

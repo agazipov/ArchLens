@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const knowledgeBase: Architecture = {
-  id: "knowledge-base", title: "Search-heavy Knowledge Base", shortTitle: "Knowledge Base", category: "content", level: "system", complexity: "Medium",
+  id: "knowledge-base", title: "Search-heavy Knowledge Base", shortTitle: "Knowledge Base", category: "data-content-media", level: "system", complexity: "Medium",
   description: "Backend хранит авторитетный контент в database, а индексатор поддерживает производный search index для быстрых полнотекстовых запросов.",
   keyIdea: "Search engine — оптимизированная read model, а не source of truth; индекс всегда можно восстановить из основного хранилища.",
   suitableFor: ["Документация", "Help center", "Внутренняя knowledge base"], notIdealFor: ["Маленький набор статических страниц", "Система без полнотекстового поиска"],

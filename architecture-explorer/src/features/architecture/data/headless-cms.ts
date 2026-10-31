@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const headlessCms: Architecture = {
-  id: "headless-cms", title: "Headless CMS", shortTitle: "Headless CMS", category: "content", level: "system", complexity: "Medium",
+  id: "headless-cms", title: "Headless CMS", shortTitle: "Headless CMS", category: "web-frontend", level: "system", complexity: "Medium",
   description: "Editors управляют структурированным контентом в CMS, а независимо развёрнутый frontend читает его через content API и формирует пользовательский experience.",
   keyIdea: "Content management отделён от presentation: один content source может обслуживать web, mobile и другие channels.",
   suitableFor: ["Omnichannel content", "Отдельная editorial команда", "Несколько frontends"], notIdealFor: ["Простой статический сайт", "Presentation жёстко связана с CMS templates"],

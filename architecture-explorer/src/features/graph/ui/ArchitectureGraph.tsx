@@ -17,7 +17,8 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import { ChevronLeft, ChevronRight, Info, Menu, MousePointer2, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Play, X } from "lucide-react";
-import type { Architecture, EdgeKind } from "@/features/architecture/model/types";
+import { buildRuntimeFrame, type RuntimeFlowParticle } from "@/features/architecture/model/flowRuntime";
+import { architectureCategoryOrder, type Architecture, type EdgeKind, type FlowKind } from "@/features/architecture/model/types";
 import type { WorkspaceLayout } from "@/features/architecture/ui/ArchitectureWorkspace";
 import { uiLabels } from "@/shared/ui/ui-labels";
 import { ArchitectureNodeCard, type ArchitectureFlowNode } from "./ArchitectureNodeCard";
@@ -26,18 +27,6 @@ const nodeTypes: NodeTypes = { architectureNode: ArchitectureNodeCard };
 
 const FLOW_HOP_DURATION_SECONDS = 0.65;
 const FLOW_REPEAT_DELAY_SECONDS = 0.7;
-const processorFlowStages: Record<string, number> = {
-  "memory-cache": 0,
-  "cache-fetch": 1,
-  "clock-fetch": 1,
-  "fetch-decode": 2,
-  "clock-decode": 2,
-  "decode-execution": 3,
-  "registers-execution": 3,
-  "execution-cache": 4,
-};
-const processorFlowStageCount = 5;
-
 function flowRatio(seconds: number, cycleSeconds: number) {
   return Number((seconds / cycleSeconds).toFixed(6));
 }
@@ -77,25 +66,7 @@ function ArchitectureEdge({
   const isHorizontal = !isReturnLane && Math.abs(sourceY - targetY) < 16;
   const labelX = isHorizontal ? (sourceX + targetX) / 2 : defaultLabelX;
   const labelY = isHorizontal ? Math.min(sourceY, targetY) - 58 : defaultLabelY;
-  const showFlowParticle = data?.showFlowParticle === true;
-  const particleColor = typeof style?.stroke === "string" ? style.stroke : "#9a86d8";
-  const flowStage = typeof data?.flowStage === "number" ? data.flowStage : 0;
-  const flowStageCount = typeof data?.flowStageCount === "number" ? data.flowStageCount : 1;
-  const cycleSeconds = flowStageCount * FLOW_HOP_DURATION_SECONDS + FLOW_REPEAT_DELAY_SECONDS;
-  const travelStart = flowStage * FLOW_HOP_DURATION_SECONDS;
-  const travelEnd = travelStart + FLOW_HOP_DURATION_SECONDS;
-  const fadeSeconds = 0.06;
-  const motionKeyPoints = flowStage === 0 ? "0;1;1" : "0;0;1;1";
-  const motionKeyTimes = flowStage === 0
-    ? `0;${flowRatio(travelEnd, cycleSeconds)};1`
-    : `0;${flowRatio(travelStart, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`;
-  const motionKeySplines = flowStage === 0
-    ? "0.12 0 0.39 0; 0 0 1 1"
-    : "0 0 1 1; 0.12 0 0.39 0; 0 0 1 1";
-  const opacityValues = flowStage === 0 ? "0;1;1;0;0" : "0;0;1;1;0;0";
-  const opacityKeyTimes = flowStage === 0
-    ? `0;${flowRatio(fadeSeconds, cycleSeconds)};${flowRatio(travelEnd - fadeSeconds, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`
-    : `0;${flowRatio(travelStart, cycleSeconds)};${flowRatio(travelStart + fadeSeconds, cycleSeconds)};${flowRatio(travelEnd - fadeSeconds, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`;
+  const flowParticles = (data?.flowParticles as RuntimeFlowParticle[] | undefined) ?? [];
 
   return (
     <>
@@ -107,26 +78,29 @@ function ArchitectureEdge({
         style={style}
         interactionWidth={interactionWidth}
       />
-      {showFlowParticle && (
-        <circle className="flow-particle" r="4.5" fill={particleColor} aria-hidden="true">
-          <animateMotion
-            path={path}
-            dur={`${cycleSeconds}s`}
-            repeatCount="indefinite"
-            keyPoints={motionKeyPoints}
-            keyTimes={motionKeyTimes}
-            calcMode="spline"
-            keySplines={motionKeySplines}
-          />
-          <animate
-            attributeName="opacity"
-            values={opacityValues}
-            keyTimes={opacityKeyTimes}
-            dur={`${cycleSeconds}s`}
-            repeatCount="indefinite"
-          />
-        </circle>
-      )}
+      {flowParticles.map((particle) => {
+        const cycleSeconds = particle.phaseCount * FLOW_HOP_DURATION_SECONDS + FLOW_REPEAT_DELAY_SECONDS;
+        const travelStart = particle.start * FLOW_HOP_DURATION_SECONDS;
+        const travelEnd = particle.end * FLOW_HOP_DURATION_SECONDS;
+        const fadeSeconds = 0.06;
+        const fromPoint = particle.direction === "forward" ? 0 : 1;
+        const toPoint = particle.direction === "forward" ? 1 : 0;
+        const startsImmediately = travelStart === 0;
+        const motionKeyPoints = startsImmediately ? `${fromPoint};${toPoint};${toPoint}` : `${fromPoint};${fromPoint};${toPoint};${toPoint}`;
+        const motionKeyTimes = startsImmediately
+          ? `0;${flowRatio(travelEnd, cycleSeconds)};1`
+          : `0;${flowRatio(travelStart, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`;
+        const opacityValues = startsImmediately ? "0;1;1;0;0" : "0;0;1;1;0;0";
+        const opacityKeyTimes = startsImmediately
+          ? `0;${flowRatio(fadeSeconds, cycleSeconds)};${flowRatio(travelEnd - fadeSeconds, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`
+          : `0;${flowRatio(travelStart, cycleSeconds)};${flowRatio(travelStart + fadeSeconds, cycleSeconds)};${flowRatio(travelEnd - fadeSeconds, cycleSeconds)};${flowRatio(travelEnd, cycleSeconds)};1`;
+        return (
+          <circle key={particle.id} className={`flow-particle flow-kind-${particle.kind}`} r="4.5" fill={flowParticleColors[particle.kind]} aria-hidden="true">
+            <animateMotion path={path} dur={`${cycleSeconds}s`} repeatCount="indefinite" keyPoints={motionKeyPoints} keyTimes={motionKeyTimes} calcMode="linear" />
+            <animate attributeName="opacity" values={opacityValues} keyTimes={opacityKeyTimes} dur={`${cycleSeconds}s`} repeatCount="indefinite" />
+          </circle>
+        );
+      })}
       {label && (
         <EdgeLabelRenderer>
           <div
@@ -150,6 +124,14 @@ const edgeColors: Record<EdgeKind, string> = {
   async: "#69a982",
   realtime: "#55b8c5",
   control: "#c67878",
+};
+
+const flowParticleColors: Record<FlowKind, string> = {
+  request: "#6ea4df",
+  response: "#66c6b2",
+  message: "#d5a75d",
+  data: "#a892e2",
+  control: "#d27f7f",
 };
 
 interface Props {
@@ -195,11 +177,29 @@ export function ArchitectureGraph({
 }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<ReactFlowInstance<ArchitectureFlowNode, Edge> | null>(null);
+  const [scenarioSelectorOpen, setScenarioSelectorOpen] = useState(false);
+  const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
   const [walkthroughStep, setWalkthroughStep] = useState<number | null>(null);
   const compactProcessor = layout === "compact" && architecture.id === "processor-architecture";
-  const activeStep = walkthroughStep === null ? undefined : architecture.walkthrough?.steps[walkthroughStep];
+  const flowScenarios = architecture.flowScenarios ?? [];
+  const activeScenario = flowScenarios.find((scenario) => scenario.id === activeScenarioId);
+  const activeScene = walkthroughStep === null ? undefined : activeScenario?.steps[walkthroughStep];
   const currentStepNumber = walkthroughStep ?? 0;
+  const runtimeFrame = buildRuntimeFrame(architecture, activeScene);
   const fitOptions = useMemo(() => ({ padding: compactProcessor ? 0.08 : 0.2, maxZoom: compactProcessor ? 1 : 1.1 }), [compactProcessor]);
+
+  function startScenario(scenarioId: string) {
+    setActiveScenarioId(scenarioId);
+    setWalkthroughStep(0);
+    setScenarioSelectorOpen(false);
+    onSelectNode(undefined);
+  }
+
+  function closeWalkthrough() {
+    setActiveScenarioId(null);
+    setWalkthroughStep(null);
+    setScenarioSelectorOpen(false);
+  }
 
   const fitGraph = useCallback((duration = 180, preferReadable = false) => {
     requestAnimationFrame(() => {
@@ -213,47 +213,47 @@ export function ArchitectureGraph({
     });
   }, [architecture.id, fitOptions, layout]);
 
-  const nodes = useMemo<ArchitectureFlowNode[]>(() => architecture.nodes.map((node) => {
+  const nodes: ArchitectureFlowNode[] = architecture.nodes.map((node) => {
     const selectedRelated = !selectedNodeId || node.id === selectedNodeId || architecture.edges.some((edge) => (edge.source === selectedNodeId && edge.target === node.id) || (edge.target === selectedNodeId && edge.source === node.id));
+    const flowActive = Boolean(activeScene && runtimeFrame.activeNodeIds.has(node.id));
+    const branchAlternative = Boolean(activeScene && runtimeFrame.alternativeNodeIds.has(node.id) && !flowActive);
     return {
-    id: node.id,
-    type: "architectureNode",
-    position: compactProcessor ? compactProcessorPositions[node.id] ?? node.position : node.position,
-    data: {
-      architectureNode: node,
-      onActivate: onSelectNode,
-      walkthroughActive: activeStep?.nodeId === node.id,
-      muted: activeStep ? activeStep.nodeId !== node.id : !selectedRelated,
-    },
-    selected: node.id === selectedNodeId,
-    draggable: false,
-    focusable: false,
-    selectable: true,
-  };
-  }), [activeStep, architecture, compactProcessor, selectedNodeId, onSelectNode]);
+      id: node.id,
+      type: "architectureNode",
+      position: compactProcessor ? compactProcessorPositions[node.id] ?? node.position : node.position,
+      data: {
+        architectureNode: node,
+        onActivate: onSelectNode,
+        flowActive,
+        branchAlternative,
+        muted: activeScene ? !flowActive : !selectedRelated,
+      },
+      selected: node.id === selectedNodeId,
+      draggable: false,
+      focusable: false,
+      selectable: true,
+    };
+  });
 
-  const edges = useMemo<Edge[]>(() => architecture.edges.map((edge, edgeIndex) => {
+  const edges: Edge[] = architecture.edges.map((edge) => {
     const selectedRelated = !selectedNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId;
-    const walkthroughRelated = !activeStep || activeStep.edgeIds?.includes(edge.id) === true;
-    const related = selectedNodeId ? selectedRelated : activeStep ? walkthroughRelated : true;
-    const idleFlow = !selectedNodeId && !activeStep;
+    const flowRelated = runtimeFrame.activeEdgeIds.has(edge.id);
+    const branchAlternative = runtimeFrame.alternativeEdgeIds.has(edge.id) && !flowRelated;
+    const related = selectedNodeId ? selectedRelated : activeScene ? flowRelated : true;
     const color = edgeColors[edge.type];
-    const isProcessorFlow = architecture.id === "processor-architecture";
-    const flowStage = isProcessorFlow ? processorFlowStages[edge.id] ?? edgeIndex : edgeIndex;
-    const flowStageCount = isProcessorFlow ? processorFlowStageCount : architecture.edges.length;
     return {
       ...edge,
       type: "architectureEdge",
       animated: false,
-      data: { showFlowParticle: idleFlow, layout, flowStage, flowStageCount },
-      className: selectedNodeId || activeStep ? (related ? "is-related" : "is-muted") : undefined,
-      style: { stroke: color, strokeWidth: related && (selectedNodeId || activeStep) ? 2.8 : 2 },
+      data: { layout, flowParticles: runtimeFrame.particlesByEdge.get(edge.id) ?? [] },
+      className: selectedNodeId || activeScene ? (related ? "is-related" : branchAlternative ? "is-branch-alternative" : "is-muted") : undefined,
+      style: { stroke: color, strokeWidth: related && (selectedNodeId || activeScene) ? 2.8 : 2 },
       markerStart: edge.bidirectional ? { type: MarkerType.ArrowClosed, width: 20, height: 20, color } : undefined,
       markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color },
       focusable: false,
       ariaLabel: `${edge.source} — ${edge.target}: ${edge.label ?? uiLabels.edgeKinds[edge.type]}`,
     };
-  }), [activeStep, architecture, layout, selectedNodeId]);
+  });
 
   const presentEdgeKinds = useMemo(() => [...new Set(architecture.edges.map((edge) => edge.type))], [architecture.edges]);
   const hasBidirectionalEdges = architecture.edges.some((edge) => edge.bidirectional);
@@ -269,9 +269,9 @@ export function ArchitectureGraph({
   }, [layout, fitGraph]);
 
   useEffect(() => {
-    if (layout !== "compact" || walkthroughStep === null) return;
+    if (layout !== "compact" || !activeScene) return;
     canvasRef.current?.closest<HTMLElement>(".workspace-shell")?.scrollTo({ top: 0, left: 0 });
-  }, [layout, walkthroughStep]);
+  }, [activeScene, layout]);
 
   useEffect(() => {
     const container = canvasRef.current;
@@ -304,11 +304,15 @@ export function ArchitectureGraph({
             <label className="compact-architecture-select">
               <span>{uiLabels.architectureSelection}</span>
               <select value={architecture.id} onChange={(event) => onSelectArchitecture(event.target.value)}>
-                {[...Map.groupBy(architectures, (item) => item.category).entries()].map(([category, items]) => (
+                {architectureCategoryOrder.map((category) => {
+                  const items = architectures.filter((item) => item.category === category);
+                  if (items.length === 0) return null;
+                  return (
                   <optgroup key={category} label={uiLabels.categories[category]}>
                     {items.map((item) => <option key={item.id} value={item.id}>{item.shortTitle}</option>)}
                   </optgroup>
-                ))}
+                  );
+                })}
               </select>
             </label>
           )}
@@ -349,17 +353,32 @@ export function ArchitectureGraph({
           <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#29303a" />
           <Controls showInteractive={false} position="bottom-right" fitViewOptions={{ ...fitOptions, duration: 180 }} aria-label={uiLabels.zoomControls} />
         </ReactFlow>
-        {architecture.walkthrough && walkthroughStep === null && <button type="button" className="walkthrough-launch" onClick={() => setWalkthroughStep(0)}><Play size={15} fill="currentColor" /> {uiLabels.startWalkthrough}</button>}
-        {architecture.walkthrough && activeStep && (
+        {flowScenarios.length > 0 && !activeScenario && !scenarioSelectorOpen && (
+          <button type="button" className="walkthrough-launch" onClick={() => flowScenarios.length === 1 ? startScenario(flowScenarios[0].id) : setScenarioSelectorOpen(true)}><Play size={15} fill="currentColor" /> {uiLabels.startWalkthrough}</button>
+        )}
+        {scenarioSelectorOpen && (
+          <section className="walkthrough-card scenario-selector" aria-label={uiLabels.selectScenario}>
+            <div className="walkthrough-card-heading"><span>{uiLabels.selectScenario}</span><button type="button" onClick={closeWalkthrough} aria-label={uiLabels.closeWalkthrough}><X size={15} /></button></div>
+            <div className="scenario-list">{flowScenarios.map((scenario) => <button type="button" key={scenario.id} onClick={() => startScenario(scenario.id)}><strong>{scenario.title}</strong>{scenario.description && <span>{scenario.description}</span>}</button>)}</div>
+          </section>
+        )}
+        {activeScenario && activeScene && (
           <section className="walkthrough-card" aria-live="polite">
-            <div className="walkthrough-card-heading"><span>{architecture.walkthrough.title}</span><button type="button" onClick={() => setWalkthroughStep(null)} aria-label={uiLabels.closeWalkthrough}><X size={15} /></button></div>
-            <div className="walkthrough-progress">{uiLabels.step} {currentStepNumber + 1} / {architecture.walkthrough.steps.length}</div>
-            <h2>{activeStep.title}</h2>
-            <p>{activeStep.description}</p>
-            <code>{architecture.walkthrough.example}</code>
+            <div className="walkthrough-card-heading"><span>{activeScenario.title}</span><button type="button" onClick={closeWalkthrough} aria-label={uiLabels.closeWalkthrough}><X size={15} /></button></div>
+            <div className="flow-metadata">
+              {activeScenario.scope && <span>{uiLabels.flowScopes[activeScenario.scope]}</span>}
+              {activeScenario.fidelity && <span>{uiLabels.flowFidelities[activeScenario.fidelity]}</span>}
+            </div>
+            <div className="walkthrough-progress">{uiLabels.step} {currentStepNumber + 1} / {activeScenario.steps.length}</div>
+            <h2>{activeScene.title}</h2>
+            <p>{activeScene.description}</p>
+            {runtimeFrame.kinds.length > 0 && <div className="flow-kind-list">{runtimeFrame.kinds.map((kind) => <span key={kind}><i style={{ background: flowParticleColors[kind] }} />{uiLabels.flowKinds[kind]}</span>)}</div>}
+            {runtimeFrame.branches.map((branch) => <div className="flow-branch" key={branch.condition}><strong>{branch.condition}</strong><div>{branch.paths.map((path) => <span key={path.id} className={path.selected ? "is-selected" : "is-muted"}>{path.label}{path.selected && <small>{uiLabels.selectedBranch}</small>}</span>)}</div></div>)}
+            {activeScenario.assumptions && activeScenario.assumptions.length > 0 && <details className="walkthrough-assumptions"><summary>{uiLabels.assumptions}</summary><ul>{activeScenario.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul></details>}
+            {activeScenario.sources && activeScenario.sources.length > 0 && <div className="flow-sources">{activeScenario.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}</a>)}</div>}
             <div className="walkthrough-actions">
               <button type="button" disabled={currentStepNumber === 0} onClick={() => setWalkthroughStep((step) => step === null ? 0 : Math.max(0, step - 1))}><ChevronLeft size={15} /> {uiLabels.previousStep}</button>
-              {currentStepNumber < architecture.walkthrough.steps.length - 1 ? <button type="button" onClick={() => setWalkthroughStep((step) => step === null ? 0 : step + 1)}>{uiLabels.nextStep} <ChevronRight size={15} /></button> : <button type="button" onClick={() => setWalkthroughStep(null)}>{uiLabels.finishWalkthrough}</button>}
+              {currentStepNumber < activeScenario.steps.length - 1 ? <button type="button" onClick={() => setWalkthroughStep((step) => step === null ? 0 : step + 1)}>{uiLabels.nextStep} <ChevronRight size={15} /></button> : <button type="button" onClick={closeWalkthrough}>{uiLabels.finishWalkthrough}</button>}
             </div>
           </section>
         )}

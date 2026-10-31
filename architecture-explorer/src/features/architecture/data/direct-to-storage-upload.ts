@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const directToStorageUpload: Architecture = {
-  id: "direct-to-storage-upload", title: "Direct-to-storage Upload", shortTitle: "Direct Upload", category: "media", level: "system", complexity: "Medium",
+  id: "direct-to-storage-upload", title: "Direct-to-storage Upload", shortTitle: "Direct Upload", category: "data-content-media", level: "system", complexity: "Medium",
   description: "Backend авторизует upload и выдаёт signed URL, после чего browser отправляет большой файл напрямую в object storage.",
   keyIdea: "Application server контролирует право загрузки, но не обязан проксировать каждый байт большого файла.",
   suitableFor: ["Большие изображения и видео", "User-generated files", "Высокий upload traffic"], notIdealFor: ["Очень маленькие payloads", "Файл необходимо синхронно проверять до сохранения"],

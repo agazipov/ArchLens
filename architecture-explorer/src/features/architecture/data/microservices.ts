@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const microservices: Architecture = {
-  id: "microservices", title: "Microservices", shortTitle: "Microservices", category: "distributed", level: "system", complexity: "High",
+  id: "microservices", title: "Microservices", shortTitle: "Microservices", category: "distributed-scale", level: "system", complexity: "High",
   description: "Gateway направляет requests в independently deployed services, каждый из которых владеет своей business capability и данными.",
   keyIdea: "Microservices покупают независимое масштабирование и организационные границы ценой distributed systems, observability и deployment complexity.",
   suitableFor: ["Несколько автономных команд", "Разные scaling profiles", "Capabilities с независимыми release cycles"], notIdealFor: ["Небольшая команда", "Неясные domain boundaries", "Продукт, который помещается в modular monolith"],

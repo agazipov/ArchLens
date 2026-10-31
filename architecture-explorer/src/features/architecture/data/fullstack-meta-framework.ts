@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const fullstackMetaFramework: Architecture = {
-  id: "fullstack-meta-framework", title: "Fullstack Meta-framework", shortTitle: "Fullstack Framework", category: "fundamentals", level: "system", complexity: "Medium",
+  id: "fullstack-meta-framework", title: "Fullstack Meta-framework", shortTitle: "Fullstack Framework", category: "web-frontend", level: "system", complexity: "Medium",
   description: "Одна deployment unit объединяет серверный рендеринг, интерактивный клиент и серверные операции.",
   keyIdea: "Client/server boundary проходит внутри одного framework runtime, но секреты и данные всё равно остаются на сервере.",
   suitableFor: ["Продукт одной команды", "Контент с интерактивностью", "Быстрый fullstack delivery"], notIdealFor: ["Много независимых клиентов", "Жёстко разделённые команды frontend и backend"],

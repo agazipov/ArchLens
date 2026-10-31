@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const simpleSpa: Architecture = {
-  id: "simple-spa", title: "Simple SPA / Frontend + Backend", shortTitle: "Simple SPA", category: "fundamentals", level: "system", complexity: "Low",
+  id: "simple-spa", title: "Simple SPA / Frontend + Backend", shortTitle: "Simple SPA", category: "web-frontend", level: "system", complexity: "Low",
   description: "Браузерное приложение вызывает отдельный HTTP API, а сервер остаётся единственной доверенной точкой доступа к данным.",
   keyIdea: "Клиент отвечает за интерфейс, backend — за правила, секреты и долговременное состояние.",
   suitableFor: ["MVP и внутренние инструменты", "CRUD-продукты", "Независимый web-клиент"],

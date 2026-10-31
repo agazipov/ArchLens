@@ -6,7 +6,8 @@ import { uiLabels } from "@/shared/ui/ui-labels";
 export type ArchitectureFlowNode = Node<{
   architectureNode: ArchitectureNode;
   onActivate: (id: string) => void;
-  walkthroughActive?: boolean;
+  flowActive?: boolean;
+  branchAlternative?: boolean;
   muted?: boolean;
 }, "architectureNode">;
 
@@ -30,7 +31,7 @@ export function ArchitectureNodeCard({ data, selected }: NodeProps<ArchitectureF
   return (
     <button
       type="button"
-      className={`graph-node kind-${node.kind} ${selected ? "is-selected" : ""} ${data.walkthroughActive ? "is-walkthrough-active" : ""} ${data.muted ? "is-muted" : ""}`}
+      className={`graph-node kind-${node.kind} ${selected ? "is-selected" : ""} ${data.flowActive ? "is-flow-active" : ""} ${data.branchAlternative ? "is-branch-alternative" : ""} ${data.muted ? "is-muted" : ""}`}
       aria-label={`${node.label} — ${kindLabel}. ${uiLabels.openNodeDetails}`}
       aria-pressed={selected}
       onClick={(event) => {

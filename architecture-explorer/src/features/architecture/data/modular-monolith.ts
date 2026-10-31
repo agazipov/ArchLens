@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const modularMonolith: Architecture = {
-  id: "modular-monolith", title: "Modular Monolith", shortTitle: "Modular Monolith", category: "fundamentals", level: "system", complexity: "Medium",
+  id: "modular-monolith", title: "Modular Monolith", shortTitle: "Modular Monolith", category: "application-architecture", level: "system", complexity: "Medium",
   description: "Логически изолированные бизнес-модули работают в одном приложении и разворачиваются вместе.",
   keyIdea: "Границы модулей дают управляемую сложность без сетевой и операционной цены микросервисов.",
   suitableFor: ["Растущий продукт", "Несколько бизнес-направлений", "Команда, которой рано нужны микросервисы"], notIdealFor: ["Модули требуют полностью независимого масштабирования", "Разные модули обязаны иметь разные release cycles"],

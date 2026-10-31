@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const smallEcommerce: Architecture = {
-  id: "small-ecommerce", title: "Small E-commerce", shortTitle: "Small E-commerce", category: "commerce", level: "system", complexity: "Medium",
+  id: "small-ecommerce", title: "Small E-commerce", shortTitle: "Small E-commerce", category: "application-architecture", level: "system", complexity: "Medium",
   description: "Одна fullstack application управляет каталогом и заказами, хранит бизнес-данные, изображения и вызывает внешний payment provider.",
   keyIdea: "Начать с одной application boundary, но хранить бинарные файлы отдельно и не реализовывать платежную инфраструктуру самостоятельно.",
   suitableFor: ["Небольшой интернет-магазин", "Одна продуктовая команда", "Предсказуемый объём заказов"], notIdealFor: ["Marketplace с независимыми продавцами", "Сложный fulfillment", "Очень высокий независимый scale отдельных capabilities"],

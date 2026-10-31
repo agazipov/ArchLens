@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const analyticsDashboard: Architecture = {
-  id: "analytics-dashboard", title: "Analytics Dashboard / Reporting", shortTitle: "Analytics Dashboard", category: "data", level: "system", complexity: "Medium",
+  id: "analytics-dashboard", title: "Analytics Dashboard / Reporting", shortTitle: "Analytics Dashboard", category: "data-content-media", level: "system", complexity: "Medium",
   description: "ETL или sync копирует данные из production database в analytics storage, откуда reporting backend обслуживает тяжёлые dashboard queries.",
   keyIdea: "Аналитические reads изолируются от transactional workload, чтобы отчёты не замедляли production application.",
   suitableFor: ["BI dashboards", "Тяжёлые aggregations", "Историческая отчётность"], notIdealFor: ["Простой operational counter", "Строго realtime transactional decision"],

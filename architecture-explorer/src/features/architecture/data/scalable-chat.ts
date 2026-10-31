@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const scalableChat: Architecture = {
-  id: "scalable-chat", title: "Scalable Chat", shortTitle: "Scalable Chat", category: "realtime", level: "system", complexity: "High",
+  id: "scalable-chat", title: "Scalable Chat", shortTitle: "Scalable Chat", category: "realtime-collaboration", level: "system", complexity: "High",
   description: "Несколько WebSocket servers обслуживают connections, Pub/Sub маршрутизирует сообщения между instances, а message service сохраняет историю.",
   keyIdea: "При горизонтальном масштабировании connection state распределён, поэтому realtime instances нуждаются в shared routing channel.",
   suitableFor: ["Много одновременных connections", "Несколько realtime instances", "Rooms с участниками на разных servers"], notIdealFor: ["Небольшой чат на одном instance", "Редкие server-push события"],

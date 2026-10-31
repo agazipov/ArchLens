@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const integrationHeavyBusinessApp: Architecture = {
-  id: "integration-heavy-business-app", title: "Integration-heavy Business Application", shortTitle: "Integration-heavy App", category: "business", level: "system", complexity: "High",
+  id: "integration-heavy-business-app", title: "Integration-heavy Business Application", shortTitle: "Integration-heavy App", category: "application-architecture", level: "system", complexity: "High",
   description: "Business application обращается к внешним systems через единый integration layer, который изолирует vendor contracts, credentials, retries и webhooks.",
   keyIdea: "Integration layer защищает business core от различий и нестабильности внешних API.",
   suitableFor: ["CRM/ERP ecosystems", "Несколько внешних providers", "Разные auth и failure models"], notIdealFor: ["Одна простая стабильная integration", "Proxy без собственного mapping или policy"],

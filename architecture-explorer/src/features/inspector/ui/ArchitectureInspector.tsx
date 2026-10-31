@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleAlert, Gauge, Lightbulb, Minus, Plus, X } from "lucide-react";
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Check, CircleAlert, Gauge, Lightbulb, Minus, Plus, X } from "lucide-react";
 import type { Architecture, ArchitectureNode } from "@/features/architecture/model/types";
 import { uiLabels } from "@/shared/ui/ui-labels";
 
@@ -58,9 +58,6 @@ function NodeInspector({ architecture, node, isDrawer, onClose, onSelectNode }: 
   const incoming = architecture.edges.filter((edge) => edge.target === node.id || (edge.bidirectional && edge.source === node.id));
   const outgoing = architecture.edges.filter((edge) => edge.source === node.id || (edge.bidirectional && edge.target === node.id));
   const transferLabels = [...new Set([...incoming, ...outgoing].map((edge) => edge.label).filter((label): label is string => Boolean(label)))];
-  const walkthroughIndex = architecture.walkthrough?.steps.findIndex((step) => step.nodeId === node.id) ?? -1;
-  const previousStep = walkthroughIndex > 0 ? architecture.walkthrough?.steps[walkthroughIndex - 1] : undefined;
-  const nextStep = walkthroughIndex >= 0 ? architecture.walkthrough?.steps[walkthroughIndex + 1] : undefined;
 
   const relationButton = (edge: Architecture["edges"][number], direction: "incoming" | "outgoing") => {
     const otherId = direction === "incoming"
@@ -85,7 +82,6 @@ function NodeInspector({ architecture, node, isDrawer, onClose, onSelectNode }: 
         {incoming.length > 0 && <Section title={uiLabels.receivesFrom}><div className="relation-list">{incoming.map((edge) => relationButton(edge, "incoming"))}</div></Section>}
         {outgoing.length > 0 && <Section title={uiLabels.sendsTo}><div className="relation-list">{outgoing.map((edge) => relationButton(edge, "outgoing"))}</div></Section>}
         {transferLabels.length > 0 && <Section title={uiLabels.whatIsTransferred}><div className="transfer-list">{transferLabels.map((label) => <span key={label}>{label}</span>)}</div></Section>}
-        {(previousStep || nextStep) && <Section title={uiLabels.neighborSteps}><div className="neighbor-steps">{previousStep && <button type="button" onClick={() => onSelectNode(previousStep.nodeId)}><ArrowLeft size={14} /><span><small>{uiLabels.previousStep}</small>{previousStep.title}</span></button>}{nextStep && <button type="button" onClick={() => onSelectNode(nextStep.nodeId)}><span><small>{uiLabels.nextStep}</small>{nextStep.title}</span><ArrowRight size={14} /></button>}</div></Section>}
         <Section title={uiLabels.responsibility}><BulletList items={node.responsibilities} /></Section>
         <Section title={uiLabels.commonUses}><BulletList items={node.useCases} /></Section>
         {node.avoidWhen && <Section title={uiLabels.avoidUses}><BulletList items={node.avoidWhen} tone="negative" /></Section>}

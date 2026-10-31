@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const serverRenderedWebApp: Architecture = {
-  id: "server-rendered-web-app", title: "Server-rendered Web Application", shortTitle: "Server-rendered Web", category: "fundamentals", level: "system", complexity: "Low",
+  id: "server-rendered-web-app", title: "Server-rendered Web Application", shortTitle: "Server-rendered Web", category: "web-frontend", level: "system", complexity: "Low",
   description: "Web application формирует HTML на сервере, обрабатывает формы и напрямую работает с базой данных.",
   keyIdea: "Один серверный runtime владеет UI, правилами и доступом к данным; браузер получает готовые страницы.",
   suitableFor: ["Контентные сайты", "Business applications", "Формы и CRUD"], notIdealFor: ["Очень насыщенный offline UI", "Много независимых API-клиентов"],

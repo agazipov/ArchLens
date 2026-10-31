@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const eventAnalytics: Architecture = {
-  id: "event-analytics", title: "Event Analytics", shortTitle: "Event Analytics", category: "data", level: "system", complexity: "High",
+  id: "event-analytics", title: "Event Analytics", shortTitle: "Event Analytics", category: "data-content-media", level: "system", complexity: "High",
   description: "Clients отправляют telemetry в event collector, queue поглощает пики, processing очищает и агрегирует события, а analytics storage обслуживает исследования и dashboards.",
   keyIdea: "Высокообъёмные telemetry events проходят отдельный append-oriented pipeline и не должны записываться синхронно в production database.",
   suitableFor: ["Product analytics", "Telemetry", "Clickstream и game events"], notIdealFor: ["Небольшое число business records", "Транзакционное состояние продукта"],

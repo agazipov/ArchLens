@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const workflowSystem: Architecture = {
-  id: "workflow-system", title: "Workflow System", shortTitle: "Workflow System", category: "business", level: "system", complexity: "High",
+  id: "workflow-system", title: "Workflow System", shortTitle: "Workflow System", category: "messaging-workflows", level: "system", complexity: "High",
   description: "Workflow engine хранит состояние долгого процесса, планирует следующие шаги через queue и возобновляет выполнение после ожиданий или ошибок.",
   keyIdea: "Долгий business process — это durable state machine, а не один HTTP request или цепочка вложенных callbacks.",
   suitableFor: ["Approval flows", "Onboarding", "Многошаговые процессы с ожиданием"], notIdealFor: ["Простой CRUD", "Короткая атомарная операция"],

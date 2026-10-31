@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const notificationService: Architecture = {
-  id: "notification-service", title: "Notification Service", shortTitle: "Notification Service", category: "notifications", level: "system", complexity: "Medium",
+  id: "notification-service", title: "Notification Service", shortTitle: "Notification Service", category: "messaging-workflows", level: "system", complexity: "Medium",
   description: "Application публикует notification job в очередь, worker применяет preferences и доставляет сообщение через внешние email, push или SMS providers.",
   keyIdea: "Пользовательский request не должен ждать ненадёжную внешнюю доставку; очередь даёт buffering, retry и backpressure.",
   suitableFor: ["Transactional email", "Push и SMS", "Пиковая или ненадёжная доставка"], notIdealFor: ["Единственное редкое письмо", "Операция, где delivery result нужен синхронно"],

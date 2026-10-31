@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const loadBalancedBackend: Architecture = {
-  id: "load-balanced-backend", title: "Load-balanced Backend", shortTitle: "Load-balanced Backend", category: "distributed", level: "system", complexity: "Medium",
+  id: "load-balanced-backend", title: "Load-balanced Backend", shortTitle: "Load-balanced Backend", category: "distributed-scale", level: "system", complexity: "Medium",
   description: "Load balancer распределяет requests между несколькими stateless backend instances, которые используют общее долговременное хранилище.",
   keyIdea: "Горизонтальное масштабирование backend требует, чтобы любой instance мог обработать следующий request без локального пользовательского состояния.",
   suitableFor: ["Рост request traffic", "High availability", "Rolling deployments"], notIdealFor: ["Нагрузка помещается в один instance", "Stateful sessions невозможно вынести из process memory"],

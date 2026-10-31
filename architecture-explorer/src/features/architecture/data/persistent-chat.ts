@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const persistentChat: Architecture = {
-  id: "persistent-chat", title: "Persistent Chat", shortTitle: "Persistent Chat", category: "realtime", level: "system", complexity: "Medium",
+  id: "persistent-chat", title: "Persistent Chat", shortTitle: "Persistent Chat", category: "realtime-collaboration", level: "system", complexity: "Medium",
   description: "Клиенты держат WebSocket-соединение с realtime backend, сообщения сохраняются в PostgreSQL, а Redis помогает с presence и эфемерной координацией.",
   keyIdea: "Realtime delivery не заменяет долговременный source of truth: соединения эфемерны, история сообщений — нет.",
   suitableFor: ["Командный чат", "Support chat", "Presence и typing indicators"], notIdealFor: ["Редкие однонаправленные обновления", "Приложение без истории сообщений"],

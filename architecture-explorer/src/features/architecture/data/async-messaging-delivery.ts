@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const asyncMessagingDelivery: Architecture = {
-  id: "async-messaging-delivery", title: "Async Messaging Delivery", shortTitle: "Async Delivery", category: "realtime", level: "system", complexity: "High",
+  id: "async-messaging-delivery", title: "Async Messaging Delivery", shortTitle: "Async Delivery", category: "messaging-workflows", level: "system", complexity: "High",
   description: "Message API принимает сообщение, queue буферизует delivery work, а workers выбирают online WebSocket, push или email fallback для получателей.",
   keyIdea: "Принять сообщение и доставить его всем получателям — разные этапы; асинхронный fan-out защищает sender latency от числа и доступности recipients.",
   suitableFor: ["Fan-out нескольким получателям", "Online и offline delivery", "Пиковый message traffic"], notIdealFor: ["Небольшой чат с прямой delivery", "Строго синхронное подтверждение каждого получателя"],

@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const processorArchitecture: Architecture = {
-  id: "processor-architecture", title: "Как процессор выполняет команду", shortTitle: "Как процессор выполняет команду", category: "fundamentals", level: "computer", complexity: "Medium",
+  id: "processor-architecture", title: "Как процессор выполняет команду", shortTitle: "Выполнение инструкции", category: "computer-systems", level: "computer", complexity: "Medium",
   description: "Упрощённая архитектурная карта цикла fetch–decode–execute: от команды в памяти через кэш и блок управления к регистрам и исполнительным устройствам.",
   keyIdea: "Процессор снова и снова получает следующую команду, декодирует её, читает операнды, выполняет операцию и сохраняет результат; кэш и регистры сокращают дорогие обращения к основной памяти.",
   suitableFor: ["Понимание выполнения программы", "Знакомство с memory hierarchy", "Связь машинных команд с работой CPU"],
@@ -10,18 +10,30 @@ export const processorArchitecture: Architecture = {
   alternatives: [{ name: "RISC-V single-cycle datapath", note: "Учебная схема datapath на уровне сигналов" }, { name: "Pipeline", note: "Параллельное выполнение стадий разных команд" }],
   tradeoffs: { pros: ["Объясняет базовый цикл выполнения", "Показывает разницу памяти, регистров и вычислений", "Даёт основу для cache misses и производительности"], cons: ["Не показывает конвейер и параллелизм", "Объединяет сложные внутренние блоки", "Не отражает конкретную ISA и микроархитектуру"] },
   tags: ["cpu", "processor", "memory", "cache", "registers", "fetch-decode-execute"],
-  walkthrough: {
-    title: "Fetch → Decode → Execute",
-    example: "Пример: ADD R1, R2 — прибавить значение R2 к R1",
-    steps: [
-      { nodeId: "main-memory", title: "Команда находится в памяти", description: "Байты ADD R1, R2 хранятся в RAM вместе с остальным кодом программы." },
-      { nodeId: "cache", edgeIds: ["memory-cache"], title: "Код попадает в кэш", description: "Процессор получает строку памяти и держит её ближе к ядру, чтобы не ждать RAM повторно." },
-      { nodeId: "fetch", edgeIds: ["cache-fetch"], title: "Fetch получает инструкцию", description: "Блок выборки берёт байты следующей команды по адресу program counter." },
-      { nodeId: "decode-control", edgeIds: ["fetch-decode"], title: "Decode определяет операцию", description: "Декодер распознаёт ADD и выясняет, какие регистры нужно прочитать и куда записать результат." },
-      { nodeId: "registers", title: "Регистры дают операнды", description: "Значения R1 и R2 доступны исполнительному блоку без обращения к основной памяти." },
-      { nodeId: "execution", edgeIds: ["decode-execution", "registers-execution"], title: "Execution Units выполняют команду", description: "ALU складывает значения, а результат возвращается в R1. Затем цикл начинается для следующей команды." },
+  flowScenarios: [{
+    id: "register-add",
+    title: "Register ADD",
+    description: "Упрощённый путь ADD R1, R2 без обращения к data cache.",
+    scope: "reference",
+    fidelity: "simplified",
+    assumptions: ["Инструкция уже находится в instruction cache.", "Показан образовательный dependency flow, а не timing современной out-of-order pipeline."],
+    sources: [
+      { title: "UC Berkeley CS61C: five-stage pipeline", url: "https://notes.cs61c.org/content/pipeline/five-stage-pipeline/" },
+      { title: "Intel SDM: Basic Architecture", url: "https://cdrdv2-public.intel.com/874241/253665-090-sdm-vol-1.pdf" },
     ],
-  },
+    steps: [
+      { id: "next-instruction", title: "Выбирается следующая инструкция", description: "Next-PC logic указывает Fetch Unit адрес следующей машинной команды.", flow: { type: "activate", nodeId: "fetch", label: "select next instruction" } },
+      { id: "fetch", title: "Fetch получает байты инструкции", description: "Instruction cache передаёт Fetch Unit байты ADD R1, R2.", flow: { type: "transfer", from: "cache", to: "fetch", edgeId: "cache-fetch", kind: "data", label: "instruction bytes" } },
+      { id: "decode", title: "Decode распознаёт ADD", description: "Декодер определяет операцию и регистры-операнды.", flow: { type: "transfer", from: "fetch", to: "decode-control", edgeId: "fetch-decode", kind: "control", label: "decoded instruction" } },
+      { id: "read-registers", title: "Читаются R1 и R2", description: "Операнды берутся из register file; основная память и data cache не нужны.", flow: { type: "activate", nodeId: "registers", label: "read operands" } },
+      { id: "execute", title: "ALU выполняет сложение", description: "Control signal и значения регистров поступают одновременно в execution unit.", flow: { type: "parallel", steps: [
+        { type: "transfer", from: "decode-control", to: "execution", edgeId: "decode-execution", kind: "control", label: "ADD control" },
+        { type: "transfer", from: "registers", to: "execution", edgeId: "registers-execution", kind: "data", label: "R1, R2" },
+      ] } },
+      { id: "write-result", title: "Результат записывается в R1", description: "Результат ALU возвращается в register file. Data cache по-прежнему не участвует.", flow: { type: "transfer", from: "execution", to: "registers", edgeId: "registers-execution", kind: "data", label: "result" } },
+      { id: "continue", title: "Выполнение продолжается", description: "Fetch Unit переходит к следующей инструкции.", flow: { type: "activate", nodeId: "fetch", label: "continue" } },
+    ],
+  }],
   nodes: [
     { id: "main-memory", kind: "memory", label: "Main Memory", subtitle: "RAM", position: { x: 20, y: 210 }, description: "Хранит машинные команды и данные запущенных программ за пределами процессорного кристалла.", reason: "Оперативная память вместительнее регистров и кэша, но доступ к ней значительно медленнее.", responsibilities: ["Хранение кода программы", "Хранение рабочих данных", "Обмен cache lines с CPU"], useCases: ["Инструкции", "Heap и stack", "Буферы"], avoidWhen: ["Операнд нужен на каждом такте"], stack: [{ name: "DRAM" }] },
     { id: "cache", kind: "memory", label: "CPU Cache", subtitle: "L1 / L2 / L3", position: { x: 280, y: 210 }, description: "Держит рядом с ядром копии недавно или часто используемых участков памяти.", reason: "Локальность программ позволяет скрыть большую часть задержки основной памяти.", responsibilities: ["Cache lines", "Hit / miss lookup", "Согласованность копий"], useCases: ["Инструкции цикла", "Горячие данные", "Prefetch"], avoidWhen: ["Единственное авторитетное хранилище"], tradeoffs: { pros: ["Низкая задержка при cache hit"], cons: ["Ограниченный размер и miss penalty"] } },

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Box, ChevronRight, CircleDot, Layers3, Search, X } from "lucide-react";
-import type { Architecture, ArchitectureCategory } from "../model/types";
+import { architectureCategoryOrder, type Architecture, type ArchitectureCategory } from "../model/types";
 import { uiLabels } from "@/shared/ui/ui-labels";
 
 interface Props {
@@ -46,7 +46,9 @@ export function ArchitectureExplorer({ architectures, selectedId, onSelect, isDr
 
       <nav aria-label={uiLabels.architectureSelection} className="architecture-nav">
         {visibleArchitectures.length === 0 && <p className="architecture-empty">{uiLabels.noArchitecturesFound}</p>}
-        {[...groups.entries()].map(([category, items]) => (
+        {architectureCategoryOrder.filter((category) => groups.has(category)).map((category) => {
+          const items = groups.get(category) ?? [];
+          return (
           <details key={category} className="nav-group" open={Boolean(normalizedQuery) || openCategories.has(category)} onToggle={(event) => {
             if (normalizedQuery) return;
             const isOpen = event.currentTarget.open;
@@ -69,7 +71,8 @@ export function ArchitectureExplorer({ architectures, selectedId, onSelect, isDr
               );
             })}</div>
           </details>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="explorer-footer">

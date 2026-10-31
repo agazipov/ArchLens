@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const basicCrm: Architecture = {
-  id: "basic-crm", title: "Basic CRM", shortTitle: "Basic CRM", category: "business", level: "system", complexity: "Low",
+  id: "basic-crm", title: "Basic CRM", shortTitle: "Basic CRM", category: "application-architecture", level: "system", complexity: "Low",
   description: "Browser работает с единым backend, который хранит customer records и применяет business rules в реляционной базе.",
   keyIdea: "Большинство ранних business applications не требуют распределённой системы: важнее понятная trust boundary и надёжные данные.",
   suitableFor: ["Внутренняя CRM", "Небольшая sales-команда", "CRUD и отчёты умеренной сложности"], notIdealFor: ["Сложные долгие workflows", "Десятки внешних интеграций", "Realtime collaboration"],

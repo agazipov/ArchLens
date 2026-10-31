@@ -2,8 +2,20 @@ export type ArchitectureComplexity = "Low" | "Medium" | "High";
 export type ArchitectureLevel = "system" | "computer";
 
 export type ArchitectureCategory =
-  | "fundamentals" | "commerce" | "business" | "realtime" | "collaboration"
-  | "games" | "content" | "media" | "notifications" | "data" | "distributed";
+  | "computer-systems" | "web-frontend" | "application-architecture"
+  | "messaging-workflows" | "realtime-collaboration" | "data-content-media"
+  | "distributed-scale" | "games";
+
+export const architectureCategoryOrder: readonly ArchitectureCategory[] = [
+  "computer-systems",
+  "web-frontend",
+  "application-architecture",
+  "messaging-workflows",
+  "realtime-collaboration",
+  "data-content-media",
+  "distributed-scale",
+  "games",
+];
 
 export type InteractionStyle = "request-response" | "realtime" | "async" | "batch";
 export type NodeKind = "client" | "server" | "api" | "domain" | "database" | "infrastructure" | "external" | "compute" | "memory";
@@ -39,17 +51,90 @@ export interface ArchitectureEdge {
   bidirectional?: boolean;
 }
 
-export interface ArchitectureWalkthroughStep {
-  nodeId: string;
-  edgeIds?: string[];
+export type FlowKind = "request" | "response" | "message" | "data" | "control";
+export type FlowDuration = "short" | "normal" | "long";
+export type FlowScope = "canonical" | "reference" | "typical" | "example" | "implementation-specific";
+export type FlowFidelity = "simplified" | "detailed";
+
+export interface SourceRef {
   title: string;
-  description: string;
+  url: string;
 }
 
-export interface ArchitectureWalkthrough {
+export interface FlowTransferStep {
+  type: "transfer";
+  from: string;
+  to: string;
+  kind: FlowKind;
+  label?: string;
+  edgeId?: string;
+  duration?: FlowDuration;
+}
+
+export interface FlowActivateStep {
+  type: "activate";
+  nodeId: string;
+  label?: string;
+  duration?: FlowDuration;
+}
+
+export interface FlowWaitStep {
+  type: "wait";
+  label: string;
+  duration?: FlowDuration;
+}
+
+export interface FlowOutcomeStep {
+  type: "outcome";
+  nodeId?: string;
+  outcome: "success" | "miss" | "accepted" | "failure" | "timeout";
+  label: string;
+  duration?: FlowDuration;
+}
+
+export interface FlowSequenceStep {
+  type: "sequence";
+  steps: FlowStep[];
+}
+
+export interface FlowParallelStep {
+  type: "parallel";
+  steps: FlowStep[];
+}
+
+export interface FlowBranchPath {
+  id: string;
+  label: string;
+  selected?: boolean;
+  steps: FlowStep[];
+}
+
+export interface FlowBranchStep {
+  type: "branch";
+  condition: string;
+  paths: FlowBranchPath[];
+}
+
+export type FlowStep =
+  | FlowTransferStep | FlowActivateStep | FlowWaitStep | FlowOutcomeStep
+  | FlowSequenceStep | FlowParallelStep | FlowBranchStep;
+
+export interface FlowScene {
+  id: string;
   title: string;
-  example: string;
-  steps: ArchitectureWalkthroughStep[];
+  description: string;
+  flow: FlowStep;
+}
+
+export interface FlowScenario {
+  id: string;
+  title: string;
+  description?: string;
+  scope?: FlowScope;
+  fidelity?: FlowFidelity;
+  assumptions?: string[];
+  sources?: SourceRef[];
+  steps: FlowScene[];
 }
 
 export interface Architecture {
@@ -69,7 +154,7 @@ export interface Architecture {
   tradeoffs: { pros: string[]; cons: string[] };
   interactionStyles?: InteractionStyle[];
   tags?: string[];
-  walkthrough?: ArchitectureWalkthrough;
+  flowScenarios?: FlowScenario[];
   nodes: ArchitectureNode[];
   edges: ArchitectureEdge[];
 }

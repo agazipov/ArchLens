@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const mediaProcessingPipeline: Architecture = {
-  id: "media-processing-pipeline", title: "Media Processing Pipeline", shortTitle: "Media Pipeline", category: "media", level: "system", complexity: "High",
+  id: "media-processing-pipeline", title: "Media Processing Pipeline", shortTitle: "Media Pipeline", category: "data-content-media", level: "system", complexity: "High",
   description: "Upload сохраняется как original object, storage event ставит job в queue, workers создают производные изображения или видео, а CDN доставляет результат.",
   keyIdea: "CPU-intensive processing выполняется асинхронно и масштабируется независимо от upload/API path.",
   suitableFor: ["Image resizing", "Video transcoding", "Пользовательский media content"], notIdealFor: ["Файлы уже готовы к публикации", "Мгновенная синхронная обработка маленького объекта"],

@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const collaborativeEditor: Architecture = {
-  id: "collaborative-editor", title: "Collaborative Editor", shortTitle: "Collaborative Editor", category: "collaboration", level: "system", complexity: "High",
+  id: "collaborative-editor", title: "Collaborative Editor", shortTitle: "Collaborative Editor", category: "realtime-collaboration", level: "system", complexity: "High",
   description: "Clients отправляют операции через realtime gateway, collaboration engine упорядочивает concurrent changes и сохраняет document state.",
   keyIdea: "Совместное редактирование требует отдельного coordination layer, потому что несколько пользователей одновременно меняют одно состояние.",
   suitableFor: ["Документы и whiteboards", "Совместное редактирование", "Presence и live cursors"], notIdealFor: ["Редкие независимые edits", "Обычный CRUD record locking достаточен"],

@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const eventDrivenOrderProcessing: Architecture = {
-  id: "event-driven-order-processing", title: "Event-driven Order Processing", shortTitle: "Event-driven Orders", category: "commerce", level: "system", complexity: "High",
+  id: "event-driven-order-processing", title: "Event-driven Order Processing", shortTitle: "Event-driven Orders", category: "messaging-workflows", level: "system", complexity: "High",
   description: "Order API надёжно сохраняет заказ и публикует событие, после чего независимые consumers запускают оплату, уведомления и fulfillment.",
   keyIdea: "Очередь убирает долгие и ненадёжные шаги из request path, но требует идемпотентных consumers и явных состояний заказа.",
   suitableFor: ["Несколько post-order процессов", "Пиковый поток заказов", "Интеграции с разной доступностью"], notIdealFor: ["Очень простой checkout", "Все шаги обязаны завершиться в одном синхронном ответе"],

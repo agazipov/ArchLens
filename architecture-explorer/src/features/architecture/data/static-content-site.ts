@@ -1,7 +1,7 @@
 import type { Architecture } from "../model/types";
 
 export const staticContentSite: Architecture = {
-  id: "static-content-site", title: "Static Content Site", shortTitle: "Static Content Site", category: "content", level: "system", complexity: "Low",
+  id: "static-content-site", title: "Static Content Site", shortTitle: "Static Content Site", category: "web-frontend", level: "system", complexity: "Low",
   description: "CMS или Markdown становится входом для build process, который заранее генерирует assets и публикует их в CDN.",
   keyIdea: "Если контент меняется реже, чем читается, страницы выгодно построить заранее и обслуживать без application server на каждом request.",
   suitableFor: ["Документация", "Marketing site", "Блог и reference content"], notIdealFor: ["Персонализированные данные на каждый request", "Частые server-side mutations"],
