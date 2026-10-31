@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { backgroundJobProcessing } from "../src/features/architecture/data/background-job-processing.ts";
 import { cachedApplication } from "../src/features/architecture/data/cached-application.ts";
+import { architectures } from "../src/features/architecture/data/index.ts";
 import { processorArchitecture } from "../src/features/architecture/data/processor-architecture.ts";
 import { buildRuntimeFrame } from "../src/features/architecture/model/flowRuntime.ts";
+import { architectureCategoryOrder } from "../src/features/architecture/model/types.ts";
 
 function scene(architecture: typeof processorArchitecture, id: string) {
   const result = architecture.flowScenarios?.[0]?.steps.find((step) => step.id === id);
@@ -12,6 +14,11 @@ function scene(architecture: typeof processorArchitecture, id: string) {
 }
 
 describe("flow runtime", () => {
+  test("has at least one walkthrough scenario in every taxonomy group", () => {
+    const coveredCategories = new Set(architectures.filter((architecture) => architecture.flowScenarios?.length).map((architecture) => architecture.category));
+    assert.deepEqual(coveredCategories, new Set(architectureCategoryOrder));
+  });
+
   test("produces no active flow without an explicit scene", () => {
     const frame = buildRuntimeFrame(processorArchitecture);
     assert.equal(frame.particlesByEdge.size, 0);
