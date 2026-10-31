@@ -8,6 +8,31 @@ export const headlessCms: Architecture = {
   stack: [{ name: "Headless CMS" }, { name: "Next.js / Nuxt / SvelteKit" }, { name: "CDN" }], alternatives: [{ name: "Static Content Site" }, { name: "Server-rendered Web Application" }],
   tradeoffs: { pros: ["Frontend независим от CMS UI", "Контент переиспользуется между channels", "Editorial workflow отделён от deployment"], cons: ["Preview и cache invalidation", "Две systems для эксплуатации", "Content API latency и vendor dependency"] },
   interactionStyles: ["request-response", "async"], tags: ["content", "cms", "api"],
+  flowScenarios: [{
+    id: "publish-and-deliver-entry",
+    title: "Publish and deliver a content entry",
+    description: "Editor публикует structured entry в CMS, content storage остаётся source of truth, а read-only delivery layer обслуживает frontend через CDN.",
+    scope: "typical",
+    fidelity: "detailed",
+    assumptions: ["Entry прошла editorial review до publish command.", "Delivery layer содержит только опубликованную версию, не draft.", "Cache invalidation распространяется асинхронно и может занять короткое время."],
+    sources: [{ title: "Contentful: Content Delivery API", url: "https://www.contentful.com/developers/docs/references/content-delivery-api/overview/" }],
+    steps: [
+      { id: "publish", title: "Editor публикует entry", description: "CMS проверяет editorial state и фиксирует опубликованную revision в canonical storage.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "editors", to: "cms", edgeId: "editors-cms", kind: "request", label: "publish entry" },
+        { type: "transfer", from: "cms", to: "content-store", edgeId: "cms-store", kind: "data", label: "store published revision" },
+      ] } },
+      { id: "propagate", title: "Publication обновляет delivery layer", description: "CMS посылает publish event, после чего API/CDN перестаёт отдавать прежнюю cached version.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "cms", to: "delivery", edgeId: "cms-delivery", kind: "message", label: "publish and invalidate" },
+        { type: "wait", label: "propagate cache invalidation", duration: "short" },
+        { type: "outcome", nodeId: "delivery", outcome: "accepted", label: "published entry available" },
+      ] } },
+      { id: "query", title: "Frontend запрашивает опубликованный content", description: "Presentation layer получает structured JSON и media URLs через глобальный read-only delivery path.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "frontend", to: "delivery", edgeId: "frontend-delivery", kind: "request", label: "content query" },
+        { type: "transfer", from: "delivery", to: "frontend", edgeId: "frontend-delivery", kind: "response", label: "published entry" },
+        { type: "outcome", nodeId: "frontend", outcome: "success", label: "new content rendered" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "editors", kind: "client", label: "Editors", position: { x: 20, y: 80 }, description: "Создают и публикуют структурированный content через editorial UI.", reason: "Редакторы не должны изменять frontend code для каждой публикации.", responsibilities: ["Authoring", "Review", "Publish"], useCases: ["Article", "Product copy", "Landing content"] },
     { id: "cms", kind: "server", label: "Headless CMS", position: { x: 300, y: 80 }, description: "Управляет content model, workflow и content API.", reason: "Editorial lifecycle является отдельной capability от presentation.", responsibilities: ["Content model", "Editorial workflow", "Content API"], useCases: ["Draft", "Publish", "Preview"] },
@@ -19,6 +44,6 @@ export const headlessCms: Architecture = {
     { id: "editors-cms", source: "editors", target: "cms", label: "author / publish", type: "request" },
     { id: "cms-store", source: "cms", target: "content-store", label: "content / revisions", type: "data" },
     { id: "cms-delivery", source: "cms", target: "delivery", label: "publish", type: "event" },
-    { id: "frontend-delivery", source: "frontend", target: "delivery", label: "content query", type: "request" },
+    { id: "frontend-delivery", source: "frontend", target: "delivery", label: "content query", type: "request", bidirectional: true },
   ],
 };
