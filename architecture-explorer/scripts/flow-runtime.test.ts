@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { backgroundJobProcessing } from "../src/features/architecture/data/background-job-processing.ts";
 import { cachedApplication } from "../src/features/architecture/data/cached-application.ts";
+import { eventDrivenOrderProcessing } from "../src/features/architecture/data/event-driven-order-processing.ts";
 import { architectures } from "../src/features/architecture/data/index.ts";
 import { processorArchitecture } from "../src/features/architecture/data/processor-architecture.ts";
 import { buildRuntimeFrame } from "../src/features/architecture/model/flowRuntime.ts";
@@ -38,6 +39,16 @@ describe("flow runtime", () => {
     assert.equal(control.end, data.end);
     assert.equal(frame.phaseCount, 1);
     assert.deepEqual(new Set(frame.kinds), new Set(["control", "data"]));
+  });
+
+  test("fans one event out to all subscribers in the same phase", () => {
+    const frame = buildRuntimeFrame(eventDrivenOrderProcessing, scene(eventDrivenOrderProcessing, "fanout"));
+    const particles = ["bus-payment", "bus-notification", "bus-fulfillment"].map((edgeId) => frame.particlesByEdge.get(edgeId)?.[0]);
+
+    particles.forEach((particle) => assert.ok(particle));
+    assert.deepEqual(particles.map((particle) => particle?.start), [0, 0, 0]);
+    assert.deepEqual(particles.map((particle) => particle?.end), [1, 1, 1]);
+    assert.equal(frame.phaseCount, 1);
   });
 
   test("preserves reverse runtime direction on a bidirectional topology edge", () => {
