@@ -8,6 +8,33 @@ export const eventAnalytics: Architecture = {
   stack: [{ name: "Kafka / NATS" }, { name: "Stream or batch processing" }, { name: "Analytics storage" }], alternatives: [{ name: "Managed analytics platform" }, { name: "Analytics Dashboard / Reporting" }],
   tradeoffs: { pros: ["Высокий ingestion throughput", "Production DB не перегружена", "Raw events можно переобработать"], cons: ["Late и duplicate events", "Schema governance", "Pipeline lag и storage cost"] },
   interactionStyles: ["async", "batch"], tags: ["analytics", "events", "telemetry"],
+  flowScenarios: [{
+    id: "ingest-and-aggregate-telemetry",
+    title: "Ingest and aggregate a telemetry batch",
+    description: "Collector быстро принимает telemetry, durable queue отделяет ingestion от processing, а processor записывает нормализованные события и aggregates.",
+    scope: "typical",
+    fidelity: "simplified",
+    assumptions: ["Client не ждёт аналитического результата после отправки batch.", "Queue хранит события достаточно долго для replay после сбоя processor-а.", "Processor дедуплицирует повторно доставленные события по стабильному event id."],
+    sources: [{ title: "Apache Kafka: Introduction to event streaming", url: "https://kafka.apache.org/intro/" }],
+    steps: [
+      { id: "collect", title: "Clients отправляют telemetry batch", description: "SDK группирует product events, а collector проверяет identity, envelope и ограничения размера.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "clients", to: "collector", edgeId: "clients-collector", kind: "message", label: "telemetry batch" },
+        { type: "activate", nodeId: "collector", label: "validate envelope" },
+      ] } },
+      { id: "append", title: "Collector быстро передаёт события в durable log", description: "Ingestion capacity не зависит от текущей скорости downstream aggregation.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "collector", to: "queue", edgeId: "collector-queue", kind: "message", label: "append events" },
+        { type: "outcome", nodeId: "queue", outcome: "accepted", label: "batch retained for replay" },
+      ] } },
+      { id: "process", title: "Processor читает и нормализует поток", description: "Consumer может повторно прочитать retained events; дедупликация и event-time logic предотвращают двойной учёт.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "queue", to: "processing", edgeId: "queue-processing", kind: "message", label: "consume or replay" },
+        { type: "activate", nodeId: "processing", label: "validate, deduplicate, aggregate" },
+      ] } },
+      { id: "store", title: "Analytics storage получает результат", description: "Нормализованные events и aggregates становятся доступны funnels, cohorts и dashboards.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "processing", to: "storage", edgeId: "processing-storage", kind: "data", label: "events and aggregates" },
+        { type: "outcome", nodeId: "storage", outcome: "success", label: "analytics data queryable" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "clients", kind: "client", label: "Clients", position: { x: 20, y: 170 }, description: "Генерируют product и technical events без ожидания аналитического результата.", reason: "Telemetry не должна замедлять основной user flow.", responsibilities: ["Event creation", "Batching", "Client context"], useCases: ["Page viewed", "Button clicked", "Match finished"] },
     { id: "collector", kind: "api", label: "Event Collector", position: { x: 300, y: 170 }, description: "Принимает большой поток событий, проверяет envelope и быстро подтверждает ingestion.", reason: "Public ingestion boundary защищает внутренний pipeline.", responsibilities: ["Authentication", "Schema envelope", "Rate limiting"], useCases: ["Batch ingest", "SDK endpoint"] },

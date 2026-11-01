@@ -8,6 +8,37 @@ export const sessionBasedMultiplayer: Architecture = {
   stack: [{ name: "Matchmaking service" }, { name: "Container orchestration" }, { name: "PostgreSQL" }, { name: "Redis" }], alternatives: [{ name: "Peer-to-peer sessions" }, { name: "Persistent world server" }],
   tradeoffs: { pros: ["Game servers изолированы по sessions", "Capacity масштабируется pool-ом", "Account state отделён от match state"], cons: ["Нужно capacity management", "Session handoff и failures", "Matchmaking quality против wait time"] },
   interactionStyles: ["request-response", "realtime", "async"], tags: ["games", "matchmaking", "sessions"],
+  flowScenarios: [{
+    id: "match-play-and-persist-results",
+    title: "Match players, run a session, persist results",
+    description: "Authenticated player проходит matchmaking, получает dedicated session, играет через realtime channel, а authoritative result переживает завершение server process.",
+    scope: "typical",
+    fidelity: "detailed",
+    assumptions: ["Matchmaking attributes уже включают region, rating и party constraints.", "Game server является authority для simulation и финального результата.", "Session endpoint и short-lived connection token возвращаются только matched players."],
+    sources: [{ title: "Amazon GameLift Servers: How hosting works", url: "https://docs.aws.amazon.com/gameliftservers/latest/developerguide/gamelift-howitworks.html" }],
+    steps: [
+      { id: "enter-queue", title: "Player входит в matchmaking queue", description: "Auth boundary подтверждает identity и передаёт только eligible player attributes.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "client", to: "auth", edgeId: "client-auth", kind: "request", label: "login and find match" },
+        { type: "transfer", from: "auth", to: "matchmaking", edgeId: "auth-matchmaking", kind: "control", label: "eligible player" },
+      ] } },
+      { id: "allocate", title: "Matchmaker назначает свободную session", description: "После формирования группы allocator выбирает healthy server process и возвращает connection information.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "matchmaking", to: "pool", edgeId: "matchmaking-pool", kind: "control", label: "allocate session" },
+        { type: "transfer", from: "pool", to: "client", edgeId: "client-pool", kind: "response", label: "endpoint and session token" },
+      ] } },
+      { id: "play", title: "Authoritative session обрабатывает матч", description: "Inputs идут на выделенный server, а snapshots и game events возвращаются players до завершения session.", flow: { type: "sequence", steps: [
+        { type: "parallel", steps: [
+          { type: "transfer", from: "client", to: "pool", edgeId: "client-pool", kind: "message", label: "player inputs" },
+          { type: "transfer", from: "pool", to: "client", edgeId: "client-pool", kind: "response", label: "authoritative snapshots" },
+        ] },
+        { type: "wait", label: "match in progress", duration: "long" },
+      ] } },
+      { id: "complete", title: "Result сохраняется вне ephemeral session", description: "Game server подписывает outcome, results service применяет rewards и rating к durable player record.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "pool", to: "results", edgeId: "pool-results", kind: "message", label: "MatchCompleted" },
+        { type: "transfer", from: "results", to: "database", edgeId: "results-database", kind: "data", label: "rating, rewards, history" },
+        { type: "outcome", nodeId: "database", outcome: "success", label: "match result durable" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "client", kind: "client", label: "Game Client", position: { x: 20, y: 220 }, description: "Авторизуется, входит в queue и подключается к назначенной session.", reason: "Игроку нужен один управляемый путь от account до матча.", responsibilities: ["Login", "Queue request", "Join session"], useCases: ["Find match", "Join lobby", "Play"] },
     { id: "auth", kind: "api", label: "Auth / Profile", position: { x: 280, y: 220 }, description: "Проверяет identity и предоставляет matchmaking attributes.", reason: "Game server не должен самостоятельно владеть account lifecycle.", responsibilities: ["Identity", "Entitlements", "Player attributes"], useCases: ["Login", "Region", "Rating"] },

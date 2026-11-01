@@ -8,6 +8,39 @@ export const liveServiceGameBackend: Architecture = {
   stack: [{ name: "NestJS / Spring Boot / ASP.NET Core" }, { name: "PostgreSQL" }, { name: "Redis" }, { name: "Event pipeline" }], alternatives: [{ name: "Modular Monolith" }, { name: "Managed game backend" }],
   tradeoffs: { pros: ["Capabilities имеют явное ownership", "Можно масштабировать горячие paths", "Поддерживает live operations"], cons: ["Большая operational surface", "Economy consistency", "Cross-capability observability и deployment complexity"] },
   interactionStyles: ["request-response", "async", "realtime"], tags: ["games", "live-service", "capabilities"],
+  flowScenarios: [{
+    id: "claim-season-reward",
+    title: "Claim a season reward safely",
+    description: "Backend проверяет progression, атомарно выдаёт item через inventory capability и отдельно принимает product telemetry.",
+    scope: "example",
+    fidelity: "detailed",
+    assumptions: ["Claim request содержит стабильный idempotency key.", "Profile является authority для season eligibility, Inventory — для item ownership.", "Telemetry не входит в economy transaction и может быть доставлена позже."],
+    sources: [
+      { title: "PlayFab Economy: Inventory APIs", url: "https://learn.microsoft.com/en-us/gaming/playfab/economy-monetization/economy-v2/inventory/" },
+      { title: "PlayFab: Telemetry overview", url: "https://learn.microsoft.com/en-us/gaming/playfab/data-analytics/ingest-data/telemetry-overview" },
+    ],
+    steps: [
+      { id: "request", title: "Client отправляет authenticated claim", description: "Gateway проверяет identity, rate limit и idempotency key, не раскрывая внутреннюю topology.", flow: { type: "transfer", from: "client", to: "gateway", edgeId: "client-gateway", kind: "request", label: "claim season reward" } },
+      { id: "eligibility", title: "Profile подтверждает season eligibility", description: "Progression читается через owning capability; gateway получает явное domain decision.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "gateway", to: "profile", edgeId: "gateway-profile", kind: "request", label: "check season progress" },
+        { type: "transfer", from: "profile", to: "data", edgeId: "profile-data", kind: "data", label: "read progression" },
+        { type: "transfer", from: "profile", to: "gateway", edgeId: "gateway-profile", kind: "response", label: "eligibility decision" },
+      ] } },
+      { id: "decision", title: "Backend применяет выбранную business ветвь", description: "Eligible claim выдаётся ровно один раз; rejected request не меняет inventory.", flow: { type: "branch", condition: "Season reward eligible?", paths: [
+        { id: "eligible", label: "Eligible", selected: true, steps: [
+          { type: "transfer", from: "gateway", to: "inventory", edgeId: "gateway-inventory", kind: "control", label: "grant reward once" },
+          { type: "transfer", from: "inventory", to: "data", edgeId: "inventory-data", kind: "data", label: "append inventory transaction" },
+          { type: "transfer", from: "gateway", to: "client", edgeId: "client-gateway", kind: "response", label: "reward granted" },
+          { type: "transfer", from: "client", to: "analytics", edgeId: "client-analytics", kind: "message", label: "reward claimed telemetry" },
+          { type: "outcome", nodeId: "client", outcome: "success", label: "inventory updated" },
+        ] },
+        { id: "ineligible", label: "Not eligible or already claimed", steps: [
+          { type: "transfer", from: "gateway", to: "client", edgeId: "client-gateway", kind: "response", label: "claim rejected" },
+          { type: "outcome", nodeId: "client", outcome: "failure", label: "inventory unchanged" },
+        ] },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "client", kind: "client", label: "Game Client", position: { x: 20, y: 260 }, description: "Использует backend capabilities между и во время sessions.", reason: "Player experience объединяет account, progression и social systems.", responsibilities: ["Commands", "Display state", "Telemetry"], useCases: ["Login", "Inventory", "Find match"] },
     { id: "gateway", kind: "api", label: "Game Backend", subtitle: "Unified boundary", position: { x: 280, y: 260 }, description: "Аутентифицирует requests и маршрутизирует их к capability modules.", reason: "Client не должен знать внутреннюю topology backend.", responsibilities: ["Auth", "Routing", "Rate limits"], useCases: ["Profile API", "Inventory API", "Matchmaking API"] },
@@ -19,8 +52,8 @@ export const liveServiceGameBackend: Architecture = {
     { id: "data", kind: "database", label: "Owned Data Stores", position: { x: 820, y: 260 }, description: "Хранилища разделены по ownership и workload, даже если физически используют один cluster.", reason: "Profile, economy и analytics имеют разные consistency и query needs.", responsibilities: ["Durable state", "Capability ownership", "Indexes"], useCases: ["Profiles", "Inventory ledger", "Ranking data"] },
   ],
   edges: [
-    { id: "client-gateway", source: "client", target: "gateway", label: "authenticated API", type: "request" },
-    { id: "gateway-profile", source: "gateway", target: "profile", label: "profile use case", type: "request" },
+    { id: "client-gateway", source: "client", target: "gateway", label: "authenticated API", type: "request", bidirectional: true },
+    { id: "gateway-profile", source: "gateway", target: "profile", label: "profile use case", type: "request", bidirectional: true },
     { id: "gateway-inventory", source: "gateway", target: "inventory", label: "inventory use case", type: "request" },
     { id: "gateway-matchmaking", source: "gateway", target: "matchmaking", label: "queue", type: "request" },
     { id: "gateway-leaderboards", source: "gateway", target: "leaderboards", label: "rank query", type: "request" },

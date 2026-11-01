@@ -8,6 +8,31 @@ export const scalableChat: Architecture = {
   stack: [{ name: "WebSocket / Socket.IO" }, { name: "Redis Pub/Sub" }, { name: "NATS" }, { name: "PostgreSQL" }], alternatives: [{ name: "Managed realtime" }, { name: "Persistent Chat" }],
   tradeoffs: { pros: ["Горизонтальное масштабирование connections", "Cross-instance fan-out", "Message persistence отделена от transport"], cons: ["Сложнее ordering", "Connection routing и reconnect", "Pub/Sub добавляет failure mode"] },
   interactionStyles: ["realtime", "async"], tags: ["chat", "websocket", "pubsub"],
+  flowScenarios: [{
+    id: "durable-cross-instance-message",
+    title: "Send a durable message across instances",
+    description: "Sender пишет через свой WebSocket server, message service сохраняет canonical message, а Pub/Sub доставляет событие servers с подключёнными recipients.",
+    scope: "typical",
+    fidelity: "detailed",
+    assumptions: ["Sender и часть recipients подключены к разным WebSocket instances.", "Message публикуется только после успешной durable записи.", "Pub/Sub используется для live fan-out, а missed messages после reconnect читаются из database."],
+    sources: [{ title: "Redis: Pub/Sub messaging", url: "https://redis.io/docs/latest/develop/use-cases/pub-sub/" }],
+    steps: [
+      { id: "send", title: "Sender передаёт message своему server-у", description: "Connection instance аутентифицирует socket и сохраняет sender context.", flow: { type: "transfer", from: "clients", to: "servers", edgeId: "clients-servers", kind: "message", label: "room message" } },
+      { id: "persist", title: "Message service проверяет и сохраняет message", description: "Durable history фиксируется до live broadcast, поэтому reconnect не зависит от Pub/Sub retention.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "servers", to: "message-service", edgeId: "servers-message", kind: "request", label: "create message" },
+        { type: "transfer", from: "message-service", to: "database", edgeId: "message-db", kind: "data", label: "persist canonical message" },
+        { type: "outcome", nodeId: "database", outcome: "accepted", label: "message durable" },
+      ] } },
+      { id: "publish", title: "Accepted message публикуется в room channel", description: "Pub/Sub сообщает всем subscribed instances, не заставляя их знать connection maps друг друга.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "message-service", to: "pubsub", edgeId: "message-pubsub", kind: "message", label: "MessageAccepted" },
+        { type: "transfer", from: "pubsub", to: "servers", edgeId: "servers-pubsub", kind: "message", label: "room fan-out" },
+      ] } },
+      { id: "deliver", title: "Каждый server доставляет локальным recipients", description: "Instances выбирают только connections нужной room и отправляют уже сохранённое message.", flow: { type: "sequence", steps: [
+        { type: "transfer", from: "servers", to: "clients", edgeId: "clients-servers", kind: "response", label: "message delivered" },
+        { type: "outcome", nodeId: "clients", outcome: "success", label: "recipients see durable message" },
+      ] } },
+    ],
+  }],
   nodes: [
     { id: "clients", kind: "client", label: "Clients", position: { x: 20, y: 220 }, description: "Подключаются к любому доступному realtime instance.", reason: "Connections распределяются между servers для capacity и availability.", responsibilities: ["Connect", "Send", "Receive", "Reconnect"], useCases: ["Rooms", "Direct messages", "Presence"] },
     { id: "servers", kind: "server", label: "WebSocket Servers × N", position: { x: 300, y: 220 }, description: "Управляют локальными connections и отправляют сообщения локальным clients.", reason: "Один process ограничен количеством connections и не обеспечивает redundancy.", responsibilities: ["Connection lifecycle", "Local fan-out", "Authentication"], useCases: ["Socket sessions", "Room subscriptions"] },
